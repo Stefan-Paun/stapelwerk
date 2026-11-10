@@ -2,8 +2,10 @@
 //   dist/wasm/stapelwerk.wasm  (cargo release build for wasm32, paths remapped)
 //   dist/...                   (copy of web/, if it exists)
 //   dist/levels/               (`stapelwerk pack-levels levels dist/levels`: packed .lvl + index.json)
-// Later phases add: dist/en/index.html (from the German shell) and dist/sw.js (precache list).
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+//   dist/en/index.html         (English shell generated from web/index.html)
+//   dist/sw.js                 (web/sw.template.js with precache list and content version)
+import { createHash } from 'node:crypto';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { ROOT, WASM_DIST, WASM_MAX_BYTES, WASM_RAW, WASM_TARGET, cargoHint, run } from './lib.mjs';
@@ -42,7 +44,7 @@ mkdirSync(path.dirname(WASM_DIST), { recursive: true });
 // 3. Static web files (owned by the UI; may not exist yet).
 const web = path.join(ROOT, 'web');
 if (existsSync(web)) {
-  cpSync(web, dist, { recursive: true });
+  cpSync(web, dist, { recursive: true, filter: (src) => !path.basename(src).startsWith('.') || src === web });
   console.log('build: copied web/');
 } else {
   console.log('build: web/ does not exist yet, skipped');
@@ -61,4 +63,95 @@ if (existsSync(path.join(ROOT, 'levels', 'manifest.txt'))) {
   console.log('build: levels/ does not exist yet, skipped');
 }
 
+// 5. English shell dist/en/index.html, generated from the German one.
+const shellPath = path.join(dist, 'index.html');
+if (existsSync(shellPath)) {
+  const en = englishShell(readFileSync(shellPath, 'utf8'));
+  mkdirSync(path.join(dist, 'en'), { recursive: true });
+  writeFileSync(path.join(dist, 'en', 'index.html'), en);
+  console.log('build: dist/en/index.html');
+}
+
+// 6. Service worker with precache list and content version.
+const swTemplate = path.join(dist, 'sw.template.js');
+if (existsSync(swTemplate)) {
+  const template = readFileSync(swTemplate, 'utf8');
+  rmSync(swTemplate);
+  const files = listFiles(dist).filter((rel) => rel !== 'sw.js');
+  const hash = createHash('sha256');
+  hash.update(template);
+  for (const rel of files) {
+    hash.update(`\0${rel}\0`);
+    hash.update(readFileSync(path.join(dist, rel)));
+  }
+  const version = hash.digest('hex').slice(0, 12);
+  const sw = template
+    .replace("'__STAPELWERK_VERSION__'", JSON.stringify(version))
+    .replace('__STAPELWERK_PRECACHE__', JSON.stringify(files, null, 2));
+  if (sw.includes('__STAPELWERK_')) fail('sw.template.js: placeholder left after substitution');
+  writeFileSync(path.join(dist, 'sw.js'), sw);
+  console.log(`build: dist/sw.js (version ${version}, ${files.length} files precached)`);
+}
+
 console.log('build: done');
+
+/** Every file below `dir` as a sorted list of '/'-separated relative paths (dot files skipped). */
+function listFiles(dir) {
+  const out = [];
+  const walk = (d, prefix) => {
+    for (const name of readdirSync(d).sort()) {
+      if (name.startsWith('.')) continue;
+      const p = path.join(d, name);
+      if (statSync(p).isDirectory()) walk(p, `${prefix}${name}/`);
+      else out.push(`${prefix}${name}`);
+    }
+  };
+  walk(dir, '');
+  return out.sort();
+}
+
+/**
+ * Turns the German shell into the English one: lang, title, description, Open Graph,
+ * canonical, language link and static texts; relative paths gain a "../" because the
+ * page lives one directory deeper. Every replacement must match, so a changed German
+ * shell fails the build instead of producing a half-German English page.
+ */
+function englishShell(de) {
+  const SITE = 'https://stefanpaun.page/stapelwerk/';
+  const title = 'Stapelwerk · Assembly puzzles on a CPU of its own';
+  const replacements = [
+    ['<html lang="de">', '<html lang="en">'],
+    [/<title>[^<]*<\/title>/, `<title>${title}</title>`],
+    [/<meta name="description" content="[^"]*">/, '<meta name="description" content="A learning game in the browser: assembly puzzles on a home-made 32-bit teaching CPU, with a debugger and time travel. No account, no data, works offline.">'],
+    [`<link rel="canonical" href="${SITE}">`, `<link rel="canonical" href="${SITE}en/">`],
+    [/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${title}">`],
+    [/<meta property="og:description" content="[^"]*">/, '<meta property="og:description" content="30 levels from registers to the heap, with a debugger and time travel. No account, no data, works offline.">'],
+    [`<meta property="og:url" content="${SITE}">`, `<meta property="og:url" content="${SITE}en/">`],
+    [/<meta property="og:image:alt" content="[^"]*">/, '<meta property="og:image:alt" content="Stapelwerk: how a computer really computes. A stack of words drawn on a drafting sheet.">'],
+    ['<meta property="og:locale" content="de_AT">', '<meta property="og:locale" content="en_GB">'],
+    ['<meta property="og:locale:alternate" content="en_GB">', '<meta property="og:locale:alternate" content="de_AT">'],
+    ['<a class="skip" href="#main">Zum Inhalt</a>', '<a class="skip" href="#main">Skip to content</a>'],
+    ['aria-label="Hauptnavigation"', 'aria-label="Main navigation"'],
+    ['data-route="home">Kapitelplan</a>', 'data-route="home">Chapter plan</a>'],
+    ['data-route="sandbox">Sandkasten</a>', 'data-route="sandbox">Sandbox</a>'],
+    ['data-route="manual">Handbuch</a>', 'data-route="manual">Manual</a>'],
+    ['data-route="about">Über</a>', 'data-route="about">About</a>'],
+    ['<a class="lang-link" href="en/" hreflang="en" lang="en">English</a>', '<a class="lang-link" href="../" hreflang="de" lang="de">Deutsch</a>'],
+    ['aria-label="Tastenkürzel"', 'aria-label="Keyboard shortcuts"'],
+    ['aria-label="Thema wechseln"', 'aria-label="Switch theme"'],
+    [/<noscript><p class="page">[^<]*<\/p><\/noscript>/, '<noscript><p class="page">Stapelwerk needs JavaScript: the machine runs as WebAssembly in your browser. No data is sent anywhere.</p></noscript>'],
+  ];
+  let html = de;
+  for (const [from, to] of replacements) {
+    const found = typeof from === 'string' ? html.includes(from) : from.test(html);
+    if (!found) fail(`English shell: "${from}" not found in web/index.html`);
+    html = html.replace(from, to);
+  }
+  // Relative URLs move one level up; absolute URLs, fragments and the language link stay.
+  html = html.replace(/\b(href|src)="([^"]*)"/g, (all, attr, url) => {
+    if (/^(?:[a-z][a-z0-9+.-]*:|#|\/)/i.test(url) || (attr === 'href' && url === '../')) return all;
+    return `${attr}="../${url}"`;
+  });
+  if (/[äöüßÄÖÜ]/.test(html.replace(/<link rel="alternate"[^>]*>/g, ''))) fail('English shell still contains German text');
+  return html;
+}

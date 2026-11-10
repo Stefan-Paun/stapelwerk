@@ -24,8 +24,10 @@ interface are done and tested. What is still open is listed at the end.
 | Check | Result |
 |---|---|
 | `cargo test --workspace` | 221 passed, 0 failed, 3 ignored (two benchmarks, the exhaustive 2³² test that CI runs in release mode) |
-| `node --test test/unit test/wasm test/site` | 92 passed |
+| `node --test test/unit test/wasm test/site` | 94 passed |
+| `npm run test:browser` | 22 passed |
 | `check-levels --strict --mutate levels/` | 30 levels good; 550 of 550 deletions caught, 12 lines skipped with `; mutate:skip` |
+| Second solutions (`tests/solutions/`) | 28 solutions written from the task text and hints only, without the reference; all pass their levels (`crates/cli/tests/alt_solutions.rs`). Not included: the tutorial 0.1 and the sample level 2.2 |
 | `dist/wasm/stapelwerk.wasm` | 209 893 bytes (limit 300 KiB) |
 | Differential native vs. WebAssembly | 50 programs locally (`npm run check`), 300 per CI run |
 | Browser tests (`test/browser`) | headless Chrome over CDP: smoke, levels, keyboard-only play, debugger, five viewports, reduced motion, damaged storage, offline, sub-path, sandbox, XSS probes, share links |

@@ -47,7 +47,6 @@ export default {
   'plan.state.solved': 'solved',
   'plan.state.open': 'open',
   'plan.state.locked': 'locked',
-  'plan.mockNote': 'Demo mode: the machine runs as a JavaScript stand-in and four levels are playable. All thirty arrive with the real core.',
 
   'kind.tutorial': 'Introduction',
   'kind.debug': 'Debugging',
@@ -56,7 +55,6 @@ export default {
   'kind.screen': 'Screen',
   'kind.mobile': 'Phone',
 
-  'level.notPlayable': 'This level is not part of the demo yet. Task, tests and start code arrive with the real core.',
 
   'ws.views': 'Views',
   'ws.tab.task': 'Level',
@@ -136,6 +134,7 @@ export default {
 
   'notice.fault': 'Line {line}: {text}',
   'notice.budget': 'Stopped after {cycles} cycles. Line {line} ran most often; a loop probably never ends.',
+  'notice.resetFailed': 'This test cannot be started. Check that your code contains the label the test calls.',
   'notice.solved': 'Solved. All tests passed.',
   'notice.testsFailed': '{failed} of {total} tests failed.',
   'notice.assembled': 'Assembled. Step or Run starts the program.',
@@ -484,7 +483,7 @@ The CPU is invented. It has no pipeline and no cache model. What a level says ab
   'about.fontSofia': 'Sofia Sans (OFL 1.1)',
   'about.fontPlex': 'IBM Plex Mono (OFL 1.1)',
   'about.ai.title': 'How this was built',
-  'about.ai.body': 'Stapelwerk was built with Claude Code agents. The idea, the choice of content and the chapter plan come from Stefan Paun; under his direction the agents wrote code, levels and texts. It is checked with automated tests and play tests.',
+  'about.ai.body': 'Code, levels and texts were written by Claude Code agents; the idea, the choice of content and the chapter plan come from Stefan Paun. Every level is checked with a reference solution, a mutation test and an independent second solution. Mistakes are still possible, issues are welcome.',
   'about.engine.title': 'Machine',
   'about.engineMock': 'Right now the JavaScript demo stand-in is running. It reproduces part of the instruction set and exists to develop the interface.',
   'about.engineReal': 'The machine runs as a WebAssembly core, written in Rust without third-party libraries.',

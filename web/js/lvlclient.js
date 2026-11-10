@@ -59,7 +59,6 @@ function normalise(handle, entry) {
     budget: info.budget ?? 200000,
     tests: normaliseTests(info),
     reference: info.ref_cycles != null && info.ref_size != null ? { cycles: info.ref_cycles, size: info.ref_size } : null,
-    playable: info.full !== false,
     text: (lang) => handle.section(`text.${lang}`) ?? '',
     hints: (lang) => splitHints(handle.section(`hint.${lang}`)),
     learned: (lang) => handle.section(`learned.${lang}`) ?? '',
@@ -88,8 +87,23 @@ export function createLevelClient(vm, { base, fetchFn = globalThis.fetch } = {})
     return { levels };
   }
 
-  async function load(id) {
-    if (cache.has(id)) return cache.get(id);
+  // One promise per id: two overlapping load(id) calls share a single level handle
+  // instead of loading it twice and leaking one. A failed load is forgotten so it can be retried.
+  function load(id) {
+    if (!cache.has(id)) {
+      const pending = loadUncached(id).then((level) => {
+        if (!level) cache.delete(id);
+        return level;
+      }, (err) => {
+        cache.delete(id);
+        throw err;
+      });
+      cache.set(id, pending);
+    }
+    return cache.get(id);
+  }
+
+  async function loadUncached(id) {
     const { levels } = await index();
     const entry = levels.find((l) => l.id === id);
     if (!entry) return null;
@@ -101,9 +115,7 @@ export function createLevelClient(vm, { base, fetchFn = globalThis.fetch } = {})
       handle = vm.loadLevel(await res.text());
     }
     if (!handle) return null;
-    const level = normalise(handle, entry);
-    cache.set(id, level);
-    return level;
+    return normalise(handle, entry);
   }
 
   return { index, load };

@@ -6,7 +6,9 @@ import { icon } from '../icons.js';
 export function describeMismatch(t, m) {
   if (!m) return '';
   const args = { ...m.args };
-  if (m.key === 'check.not_halted' && args.status === 5 && args.hottest_line !== undefined) {
+  // The core names the status ("BUDGET_EXCEEDED"); the JS mock used the number 5.
+  const budget = args.status === 'BUDGET_EXCEEDED' || args.status === 5;
+  if (m.key === 'check.not_halted' && budget && args.hottest_line !== undefined) {
     return t('check.not_halted_budget', { cycles: args.cycles, line: args.hottest_line, count: args.hottest_count });
   }
   if (typeof args.addr === 'number') args.addr = `0x${(args.addr >>> 0).toString(16).toUpperCase().padStart(4, '0')}`;

@@ -48,7 +48,6 @@ export default {
   'plan.state.solved': 'gelöst',
   'plan.state.open': 'offen',
   'plan.state.locked': 'gesperrt',
-  'plan.mockNote': 'Demo-Modus: Die Maschine läuft als JavaScript-Nachbau, vier Levels sind spielbar. Mit dem echten Kern kommen alle dreißig.',
 
   'kind.tutorial': 'Einführung',
   'kind.debug': 'Fehlersuche',
@@ -57,7 +56,6 @@ export default {
   'kind.screen': 'Bild',
   'kind.mobile': 'Handy',
 
-  'level.notPlayable': 'Dieses Level ist im Demo-Modus noch nicht enthalten. Aufgabe, Tests und Startcode kommen mit dem echten Kern.',
 
   'ws.views': 'Ansichten',
   'ws.tab.task': 'Level',
@@ -137,6 +135,7 @@ export default {
 
   'notice.fault': 'Zeile {line}: {text}',
   'notice.budget': 'Nach {cycles} Zyklen abgebrochen. Am häufigsten lief Zeile {line}; vermutlich endet eine Schleife nie.',
+  'notice.resetFailed': 'Dieser Test lässt sich nicht starten. Prüf, ob dein Code das Label enthält, das der Test aufruft.',
   'notice.solved': 'Gelöst. Alle Tests bestanden.',
   'notice.testsFailed': '{failed} von {total} Tests nicht bestanden.',
   'notice.assembled': 'Assembliert. Schritt oder Lauf startet das Programm.',
@@ -485,7 +484,7 @@ Die CPU ist erfunden. Sie hat kein Pipeline- und kein Cache-Modell. Was ein Leve
   'about.fontSofia': 'Sofia Sans (OFL 1.1)',
   'about.fontPlex': 'IBM Plex Mono (OFL 1.1)',
   'about.ai.title': 'Wie das gebaut wurde',
-  'about.ai.body': 'Stapelwerk wurde mit Claude-Code-Agenten gebaut. Idee, Auswahl der Inhalte und Kapitelplan kommen von Stefan Paun; die Agenten haben unter seiner Anleitung Code, Levels und Texte geschrieben. Geprüft wird mit automatischen Tests und mit Spieltests.',
+  'about.ai.body': 'Code, Levels und Texte haben Claude-Code-Agenten geschrieben; Idee, Auswahl der Inhalte und Kapitelplan kommen von Stefan Paun. Jedes Level ist mit Referenzlösung, Mutationstest und einer unabhängigen zweiten Lösung geprüft. Fehler sind trotzdem möglich, Issues sind willkommen.',
   'about.engine.title': 'Maschine',
   'about.engineMock': 'Gerade läuft der Demo-Nachbau in JavaScript. Er bildet einen Teil der Befehle nach und dient der Entwicklung der Oberfläche.',
   'about.engineReal': 'Die Maschine läuft als WebAssembly-Kern, geschrieben in Rust ohne fremde Bibliotheken.',

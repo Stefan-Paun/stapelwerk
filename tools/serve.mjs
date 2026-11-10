@@ -1,5 +1,6 @@
 // Serves dist/ under http://127.0.0.1:4860/stapelwerk/ (like GitHub Pages). No dependencies.
-// Environment: PORT (default 4860), HOST (default 127.0.0.1).
+// Environment: PORT (default 4860; 0 picks a free port), HOST (default 127.0.0.1),
+// BASE (default /stapelwerk/; the browser tests also mount the site elsewhere, e.g. /a/b/c/).
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -7,7 +8,7 @@ import { ROOT } from './lib.mjs';
 
 const PORT = Number(process.env.PORT ?? 4860);
 const HOST = process.env.HOST ?? '127.0.0.1';
-const BASE = '/stapelwerk/';
+const BASE = `/${(process.env.BASE ?? '/stapelwerk/').split('/').filter(Boolean).join('/')}/`.replace(/^\/\/$/, '/');
 const DIST = path.join(ROOT, 'dist');
 
 const MIME = {
@@ -46,7 +47,7 @@ const server = http.createServer((req, res) => {
   } catch {
     return send(res, 400, 'bad request\n');
   }
-  if (pathname === '/' || pathname === '/stapelwerk') return send(res, 302, '', { Location: BASE });
+  if (BASE !== '/' && (pathname === '/' || pathname === BASE.slice(0, -1))) return send(res, 302, '', { Location: BASE });
   if (!pathname.startsWith(BASE)) return send(res, 404, 'not found\n');
   let file = path.resolve(DIST, '.' + path.sep + pathname.slice(BASE.length));
   if (file !== DIST && !file.startsWith(DIST + path.sep)) return send(res, 403, 'forbidden\n');
@@ -66,5 +67,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`serve: http://${HOST}:${PORT}${BASE}`);
+  console.log(`serve: http://${HOST}:${server.address().port}${BASE}`);
 });

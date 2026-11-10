@@ -218,7 +218,6 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
           t(`tutorial.${item}`),
           el('span', { class: 'sr-only' }, rec.tutorial[item] ? ` (${t('tutorial.done')})` : ` (${t('tutorial.open')})`))))));
     }
-    if (!level.playable) items.push(el('p', { class: 'notice-inline' }, t('level.notPlayable')));
     mount(taskBody, items);
   }
 
@@ -271,8 +270,8 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
     if (res.ok) {
       rebuildMaps();
       applyBreakpoints();
-      session.reset(ui.testIndex);
       setNotice(null);
+      resetMachine();
     } else {
       ui.result = null;
       setNotice('error', t('asm.summary', { count: ui.diagnostics.length }));
@@ -343,6 +342,18 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
   }
 
   // ------------------------------------------------------------ actions
+  // Puts the machine at the start of the selected test. A test whose start already fails
+  // (e.g. a function test whose `call` label is missing) comes back as FAULT and is shown
+  // like any other fault; an outright error status gets its own message instead of
+  // silently leaving the machine in some other state.
+  function resetMachine({ quiet = false } = {}) {
+    const status = session.reset(ui.testIndex) >>> 0;
+    if (status === STATUS.ERROR) {
+      if (!quiet) setNotice('error', t('notice.resetFailed'));
+    } else if (!quiet) noticeFromState();
+    return status;
+  }
+
   function step() {
     if (!ensureAssembled()) return;
     stop();
@@ -373,10 +384,10 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
   function restart() {
     stop();
     if (!ensureAssembled()) return;
-    session.reset(ui.testIndex);
+    setNotice(null);
+    resetMachine();
     ui.prev = null;
     diff();
-    setNotice(null);
     refresh();
     app.announce(t('live.restart'));
   }
@@ -498,7 +509,7 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
     // An endless loop shows up as an exhausted budget: mark the hottest line.
     const spin = result.tests.find((x) => x.mismatch?.key === 'check.not_halted' && x.mismatch.args?.hottest_line);
     ui.hotLine = spin ? spin.mismatch.args.hottest_line : null;
-    session.reset(ui.testIndex);
+    const resetStatus = resetMachine({ quiet: true });
     const tutorialMissing = level.kind === 'tutorial' && !progress.tutorialDone(level.id);
     if (result.passed && !tutorialMissing) {
       progress.markSolved(level.id, result.metrics, result.reference);
@@ -513,6 +524,7 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
       taskTabs.select('tests');
       app.announce(result.passed ? t('result.tutorialMissing') : t('live.testsFailed', { failed: result.tests.filter((x) => !x.passed).length }));
     }
+    if (resetStatus === STATUS.ERROR) setNotice('error', t('notice.resetFailed'));
     if (root.dataset.mtab === 'code' || root.dataset.mtab === 'task') setMobileTab('task');
     refresh();
   }

@@ -3,6 +3,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { findChrome } from '../test/browser/cdp.mjs';
 import { ROOT, WASM_DIST, WASM_MAX_BYTES, capture, cargoHint, findFiles, run } from './lib.mjs';
 
 const results = [];
@@ -99,6 +100,7 @@ step('node --test (unit, wasm, site)', () => {
 
 step('browser tests', () => {
   if (findFiles(path.join(ROOT, 'test', 'browser'), '.test.mjs').length === 0) return { skip: 'no browser tests yet' };
+  if (!findChrome() && process.env.STAPELWERK_REQUIRE_BROWSER !== '1') return { skip: 'no Chrome found (set CHROME_PATH)' };
   return run(process.execPath, [path.join('tools', 'test-browser.mjs')]);
 });
 

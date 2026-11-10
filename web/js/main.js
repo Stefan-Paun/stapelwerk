@@ -84,7 +84,7 @@ async function boot() {
       live.textContent = '';
       announceTimer = setTimeout(() => { live.textContent = text; }, 30);
     },
-    rerender: () => { if (store.get().route) render(store.get().route, false); },
+    rerender: () => (store.get().route ? render(store.get().route, false) : Promise.resolve()),
   };
 
   // Header texts come from i18n so the English shell needs no extra markup.

@@ -16,7 +16,12 @@ export async function renderLevelSelect(app) {
 
   const toggle = el('input', {
     type: 'checkbox', id: 'unlock-all', checked: progress.data.unlockAll,
-    onchange: (ev) => { progress.setUnlockAll(ev.target.checked); app.rerender(); },
+    onchange: async (ev) => {
+      progress.setUnlockAll(ev.target.checked);
+      // The plan is drawn anew; keep the keyboard focus on the switch.
+      await app.rerender();
+      document.getElementById('unlock-all')?.focus();
+    },
   });
 
   const station = (l) => {
@@ -66,7 +71,6 @@ export async function renderLevelSelect(app) {
         nextUp ? el('a', { class: 'btn btn-primary', href: `#/level/${nextUp.id}` },
           el('span', {}, t('plan.continue', { num: `${nextUp.chapter}.${nextUp.order}`, title: nextUp.title[lang] ?? nextUp.title.de })), icon('chevron')) : null,
         el('p', { class: 'plan-count mono' }, t('plan.solved', { done: solvedCount, total: levels.length })),
-        el('label', { class: 'switch', for: 'unlock-all' }, toggle, el('span', { class: 'switch-track', 'aria-hidden': 'true' }), el('span', {}, t('plan.unlockAll'))),
-        app.vm.mock ? el('p', { class: 'mock-note' }, t('plan.mockNote')) : null)),
+        el('label', { class: 'switch', for: 'unlock-all' }, toggle, el('span', { class: 'switch-track', 'aria-hidden': 'true' }), el('span', {}, t('plan.unlockAll'))))),
     el('ol', { class: 'chapters' }, chapters.map(chapterNode)));
 }

@@ -40,7 +40,7 @@ Stapelwerk schließt die Lücke zwischen den Modellrechnern der Schule (Johnny, 
 - Sicherheit: strenge CSP ohne Inline-Skripte/-Styles, DOM nur über `textContent`/`setAttribute`, Level-Texte als sichere Markdown-Teilmenge.
 - Barrierefreiheit: Tastaturbedienung, Stack als echte Tabelle, Live-Region für Debugger-Schritte, Kontrast AA, `prefers-reduced-motion`, `forced-colors`, nie nur Farbe.
 - Thema ist ausschließlich Rechnerarchitektur; keine Sicherheits- oder Angriffsthemen.
-- Offen: Demo-GIF und Screenshots für das README entstehen erst nach dem echten Kern.
+- Offen (Stand 10.11.2026): Demo-GIF und Screenshots für das README (`docs/img/`) fehlen noch.
 
 ## Brand Commitments
 
@@ -51,8 +51,10 @@ Stapelwerk schließt die Lücke zwischen den Modellrechnern der Schule (Johnny, 
 
 ## Evidence on Hand
 
-- Kapitelplan mit 30 Level-Titeln (DE/EN), Lernzielen und Musterlevel 2.2 „Bis zur Null“ im Lehrplan.
-- Noch nicht vorhanden: der echte Rust-Kern als WASM (die Oberfläche läuft bis dahin auf einem JS-Mock mit Beispieldaten), Nutzerzahlen, Erfahrungsberichte aus dem Unterricht. Nichts davon darf erfunden werden.
+- Kapitelplan und alle 30 Levels (DE/EN) in `levels/`; jedes mit Referenzlösung, Mutationstest (`check-levels --strict --mutate`) und unabhängiger zweiter Lösung geprüft.
+- Der Rust-Kern läuft als WebAssembly (`dist/wasm/stapelwerk.wasm`, ≈ 206 KiB) in der Oberfläche; der JS-Nachbau `vm-mock.js` ist nur noch ein Entwicklungswerkzeug (`?mock=1`).
+- Automatische Tests: Rust (`cargo test`), Node (Einheiten, WASM-Schnittstelle, gebaute Seite) und Browser-Tests in Chrome headless (`npm run test:browser`).
+- Noch nicht vorhanden: Spieltests mit echten Lernenden, Nutzerzahlen, Erfahrungsberichte aus dem Unterricht. Nichts davon darf erfunden werden.
 
 ## Product Principles
 

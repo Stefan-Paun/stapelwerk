@@ -204,9 +204,6 @@ input[aria-invalid='true'] { border-color: var(--pencil); box-shadow: inset 0 -2
 .plan-head h1 { font-size: var(--fs-3xl); font-weight: 750; letter-spacing: -0.015em; margin-bottom: var(--s3); }
 .plan-side { display: grid; justify-items: end; gap: var(--s3); }
 .plan-count { color: var(--ink-2); font-size: var(--fs-s); }
-.mock-note {
-  max-width: 34ch; font-size: var(--fs-s); color: var(--ochre); text-align: right;
-}
 .chapters { list-style: none; margin: 0; padding: 0; }
 .chapter {
   display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: var(--s4);
@@ -272,6 +269,7 @@ a.st-link:hover .st-title { text-decoration: underline; text-decoration-thicknes
 html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden; }
 .ws {
   overflow-x: clip;
+  grid-template-columns: minmax(0, 1fr);
   height: calc(100dvh - var(--appbar-h));
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -398,7 +396,6 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
 .check-box { width: 16px; height: 16px; border: var(--w2) solid var(--ink-3); display: grid; place-items: center; flex: none; }
 .is-done .check-box { border-color: var(--stamp); background: var(--stamp); color: var(--paper-3); }
 .check-box .icon { width: 12px; height: 12px; stroke-width: 2.6; }
-.notice-inline { padding: var(--s2) var(--s3); background: var(--ochre-wash); color: var(--ink); font-size: var(--fs-s); }
 .hints .hint { padding-top: var(--s3); border-top: var(--w1) solid var(--rule-faint); }
 .hints .hint h3 { font-size: var(--fs-s); color: var(--ink-2); margin: 0 0 var(--s2); }
 .hints .btn { margin-top: var(--s3); }
@@ -772,6 +769,12 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
   .pane-console { max-height: none; }
   .pane-mem { min-height: 320px; }
   .timeline-label { display: none; }
+  /* The select keeps its aria-label; the visible "Test case" label and the shortcut hint go. */
+  .test-pick > span, .dbg-primary kbd { display: none; }
+  .test-select { max-width: 18ch; }
+  /* Label hidden: the ruler gives way to the step readout, which keeps its full text. */
+  .timeline { grid-template-columns: minmax(40px, 1fr) minmax(0, max-content); }
+  .timeline-out { min-width: min-content; max-width: 22ch; }
   .dbg-btn .btn-label { display: none; }
   .dbg-btn { padding: 0 var(--s2); }
   .stations { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: var(--s4); }
@@ -804,7 +807,6 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
   .plan-head { grid-template-columns: 1fr; gap: var(--s4); }
   .plan-head h1 { font-size: var(--fs-2xl); }
   .plan-side { justify-items: start; }
-  .mock-note { text-align: left; }
   .chapter { grid-template-columns: 40px minmax(0, 1fr); column-gap: var(--s3); }
   .chapter-no { width: 32px; height: 32px; font-size: var(--fs-m); }
   .chapter h2 { font-size: var(--fs-l); }
