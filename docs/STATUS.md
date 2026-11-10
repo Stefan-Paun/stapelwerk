@@ -1,7 +1,7 @@
 # Status
 
 **Phase 0 (foundation and contract): done.** Phase 1A (machine) and phase 1B (assembler and
-disassembler): done.
+disassembler): done. Phase 2 (session, levels, runner, CLI) and phase 3A (WebAssembly bridge): done.
 
 ## What exists
 
@@ -12,7 +12,7 @@ disassembler): done.
 | Shared contract | `consts.rs` (memory map, segments, colours, syscalls, limits, reserved names), `fault.rs` (all `fault.*` keys, codes, args, JSON), `diag.rs` (`Diagnostic`, `Arg`, all keys), `program.rs` (`Program`, `Symbol`, `LineEntry`), `json.rs` (writer), `rng.rs` (SplitMix64, xorshift32) |
 | Placeholders | `level.rs` (data model done, parser open), `runner.rs` (result types and metrics done), `session.rs` (signatures) |
 | Tests | 8 mandatory encoding vectors, random encode/decode round trip, random words, exhaustive 2³² test (`#[ignore]`, CI release), 90 ALU vectors in `tests/vectors/alu.txt` (parsed; evaluation `#[ignore]` until phase 1A), ERRORS.md ↔ key list, CLI tests, Node ABI tests |
-| WebAssembly | exports only `abi_version()` = 1 and `memory`; no imports |
+| WebAssembly | full ABI v1 (`crates/wasm`, 42 exports + `memory`, no imports, ≈ 201 KiB) and `web/js/vm.js`; see "Phase 3A result" |
 | CLI | argument parsing for all commands; `isa-table` works; all others exit 2 with "not implemented yet" |
 | Docs | ISA, ABI, LEVELS, ERRORS, CURRICULUM, isa-table (generated), abi-exports.txt, TO-REAL-CPUS |
 | Tooling | `npm run build/start/test/check/test:browser` via `tools/*.mjs`; CI workflows test, pages, codeql; Dependabot for actions |
@@ -135,6 +135,36 @@ split of `asm/` (lexer, expr, parser, layout) is only a suggestion.
   runner and packer), `tests/runner_tests.rs` (every test kind and `check.*` key, function tests,
   heap, budget, JSON, pack round trip), `crates/cli/tests/cli_commands.rs` (end to end).
 
+### Phase 3A result (WebAssembly bridge)
+
+- `crates/wasm`: every export of `abi-exports.txt` as a hand-written C ABI (`#[unsafe(no_mangle)]
+  pub extern "C"`, only `i32`/`u32`, no imports, `panic = "abort"`). One `thread_local!` `RefCell`
+  holds a generational handle table (`table.rs`, levels and sessions in one table), the output
+  buffer and the registry of input buffers. The only `unsafe` is the `no_mangle` attribute: input
+  `(ptr, len)` ranges are looked up in the `buf_alloc` registry and copied (unknown range →
+  `abi.bad_arg`), exported pointers are addresses of boxed buffers. `sess_view` points to a boxed
+  `StateView` refreshed after every session call. `sess_run_tests`/`sess_check` use the runner;
+  for unpacked levels the reference run is computed once per level and cached (packed levels use
+  `ref_cycles`/`ref_size`). Behaviour details: ABI.md, "Clarifications made in phase 3A".
+- `web/js/vm.js`: `loadVm`, `Level`, `Session` (API of `vm-mock.js` plus the ABI; differences
+  listed in ABI.md, "web/js/vm.js contract"), typed-array views recreated after `memory.grow`,
+  trap recovery (new instance, levels and sessions reloaded, `VmError('internal')`). Pure ES module,
+  runs under Node.
+- `tools/build.mjs`: release build with `--remap-path-prefix` for HOME and the repository, refuses a
+  module containing `/Users/` or `/home/`, copies `web/`, runs `pack-levels levels dist/levels`
+  (packed `.lvl` + `index.json`).
+- `tools/differential.mjs`: reads `fuzz-gen` output (or runs it: default seed 1, N = 50), replays
+  every program through `vm.js` in test mode with the same seed and budget and compares status,
+  steps and the digests every 1000 steps. CI: fuzz job with N = 300; `npm run check` runs N = 50.
+- Tests: `crates/wasm` unit tests (handle table, JSON shapes, exports natively), Node tests
+  `test/wasm/abi.test.mjs` (exact export list, no imports, size, no local paths, raw handle errors)
+  and `test/wasm/vm.test.mjs` (level 2.2 unpacked and packed, diagnostics, debugger, input,
+  time slices, JSON shapes, views after `memory.grow`, bad handles, trap recovery).
+- Measured (M3, Node 24): `stapelwerk.wasm` 206 217 bytes (201.4 KiB); level 2.2 "assemble the
+  reference + run all 15 tests" through `vm.js`: ≈ 5 ms for the very first call of a process (engine
+  warm-up), then median 0.15 ms (packed level, browser case; p90 0.24 ms) and 0.11 ms (unpacked,
+  reference run cached after its first use); 200 repetitions each.
+
 ## Clarifications made in phase 0
 
 These fill gaps in the original design; they are documented in ISA.md and ABI.md.
@@ -174,17 +204,14 @@ These fill gaps in the original design; they are documented in ISA.md and ABI.md
 | 7 | no panic on random bytes / corrupted sources (assembler, level parser, machine) | assembler and machine done; levels open |
 | 8 | time-travel invariant `digest(goto(k)) == d_k` in random order, thinning ≥ 3×, with input while WAITING_INPUT and `set_reg` | done (2A) |
 | 9 | every `fault.*` key has a triggering test (reads ERRORS.md via `include_str!`) | 1A (key list ↔ ERRORS.md already checked) |
-| 10 | differential test native vs. WASM via `fuzz-gen` | WASM ABI phase |
+| 10 | differential test native vs. WASM via `fuzz-gen` | done (3A): `tools/differential.mjs`, N = 50 locally, 300 in CI |
 | 11 | `check-levels --strict --mutate levels/` | levels phase |
-| 12 | Node: export list == `abi-exports.txt`, no imports, ≤ 300 KiB, JSON shapes, `bad_handle`, views after `memory.grow`, time slices | partly done (imports, size, version, exports ⊆ list) |
+| 12 | Node: export list == `abi-exports.txt`, no imports, ≤ 300 KiB, JSON shapes, `bad_handle`, views after `memory.grow`, time slices | done (3A): `test/wasm/abi.test.mjs`, `test/wasm/vm.test.mjs` |
 
 ## Placeholders to remove later
 
 - `crates/core/tests/alu_vectors.rs`: `#[ignore]` on `vectors_match_cpu_alu` (phase 1A).
-- `.github/workflows/test.yml`: the `exhaustive` name filter on the `--ignored` run; the guards that
-  skip `check-levels` (until `levels/manifest.txt` exists) and the fuzz job (until
-  `test/fuzz/differential.mjs` exists).
-- `test/wasm/abi.test.mjs`: `skip` on "exports match docs/abi-exports.txt exactly" (WASM ABI phase).
+- `.github/workflows/test.yml`: the `exhaustive` name filter on the `--ignored` run.
 - `tools/build.mjs`: generating `dist/en/index.html` and `dist/sw.js` (web phase).
 - GitHub Pages must be enabled (Settings → Pages → Source: GitHub Actions) before the first push
   to `main`, otherwise the pages workflow fails at `configure-pages`.

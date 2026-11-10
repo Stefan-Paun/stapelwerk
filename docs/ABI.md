@@ -262,3 +262,70 @@ snapshots, breakpoints and line counters.
 - After every export call it recreates its typed-array views if `memory.buffer` changed.
 - If an export traps, the instance is unusable: `vm.js` creates a new instance and reports an
   "internal error" to the UI.
+
+*Clarification* (phase 3A, as implemented in `web/js/vm.js`):
+
+- `loadVm` also accepts an `ArrayBuffer`, a typed array or a `WebAssembly.Module`; a `file:` URL is
+  read with `node:fs` (Node's `fetch` cannot read files). A wrong version rejects with
+  `VmError('abi.version')`.
+- The VM object: `mock` (`false`), `abiVersion`, `segments()`, `loadLevel(text)` → `Level` or
+  `null` (then `levelDiagnostics` holds the `lvl.*` diagnostics), `newSession(level | null)`
+  (`null` = sandbox), `onInternalError` (optional callback). Class `Level`: `info()` (the
+  `level_info` object), `section(name)` (text or `null`), `free()`.
+- Additional `Session` methods: `horizon()` (furthest step reached on the current timeline, kept in
+  JavaScript) and `referenceScreen(test)` (a 4096-byte copy: `sess_reference_screen`, or for packed
+  levels the `[image.__ref_NAME]` section of the visible test `test`; `null` otherwise).
+- Status results are unsigned numbers (`0xFFFFFFFF` for handle/argument errors). `memory()` and
+  `shadow()` return live views; fetch them again after every call. `output()` returns
+  `[{kind, value}]` for the visible entries. `state()` decodes the `StateView` with the field
+  names `status, pc, regs, flags, steps, cycles, faultCode, faultAddr, outLen, inIntPos, inIntLen,
+  inTextPos, inTextLen, testIndex, budget`.
+- JSON results `{"error":"abi.…"}` are thrown as `VmError` with `key` set to the error key, except
+  `abi.not_assembled` from `check()` (→ `null`) and `runTests()` (→
+  `{passed: false, tests: [], metrics: null, reference: null}`). Using a freed `Session` or `Level`
+  throws `VmError('abi.bad_handle')`.
+- After a trap `vm.js` instantiates the module again, reloads every live level from its text and
+  every session (new handle, last successfully assembled source, test index, breakpoints; the run
+  starts over at step 0, interactive input is lost), calls `onInternalError(error)` and throws
+  `VmError('internal')`. A level or source that traps again during the reload is dropped.
+
+## Clarifications made in phase 3A
+
+These describe the behaviour of `crates/wasm` where the sections above leave room.
+
+1. **One handle table** holds levels and sessions, so passing a level handle to a `sess_*` function
+   (or a session handle to a `level_*` function) is `abi.bad_handle`. At most 65534 handles are live
+   at a time; `sess_new` returns `0xFFFFFFFF` for an invalid level handle or a full table, and
+   `level_load` returns 0 with `{"error":"abi.bad_arg"}` when the table is full.
+2. **Input buffers:** a `(ptr, len)` argument must lie inside a buffer from `buf_alloc` that has not
+   been freed (`len = 0` is always valid). Otherwise the function reports `abi.bad_arg` (JSON
+   functions), `0xFFFFFFFF` (`sess_assemble`, `sess_in_text`), −1 (`level_section`) or 0
+   (`level_load`). `buf_free` with a pair that `buf_alloc` did not return is ignored. The bytes are
+   copied before use, so the buffer can be freed right after the call.
+3. `level_load` leaves the output buffer unchanged on success. `level_section` never returns
+   `reference`; `image.NAME` returns the image as rows (`.` or a hex digit per pixel, trailing `.`
+   and empty trailing rows omitted, joined with `\n`).
+4. A level freed with `level_free` stays alive inside every session created from it.
+5. `sess_assemble` returns `0xFFFFFFFF` for an invalid handle or buffer (the output buffer then
+   holds the error object). On success the session is reset for an interactive run (test −1, input
+   open) and its breakpoints are cleared; on failure the old program is dropped.
+6. `sess_reset` returns `0xFFFFFFFF` for a test index ≥ the number of tests, < −1, ≥ 0 in a sandbox
+   session, and when the test cannot be set up (a `set`/`call` symbol the program does not define,
+   a `set` beyond 0xFFFF); the session is then unchanged. Without a program it returns 6.
+7. `sess_set_reg` returns `0xFFFFFFFF` for `reg > 11` and when the run is over (HALTED, FAULT,
+   BUDGET_EXCEEDED); `sess_back_to_change` for `kind > 2`, a register index above 11, a word address that is not 4-aligned or
+   above 0xFFFC, or a byte address above 0xFFFF; `sess_bp` for `on > 1`.
+8. `sess_disasm` reports `abi.bad_arg` for `addr ≥ 0x10000` or `count > 4096`.
+9. `sess_view` is refreshed after **every** `sess_*` call, so it is current whenever JavaScript
+   reads it.
+10. `sess_check` runs the current test (the one of the last `sess_reset`) through the test runner
+    on a fresh machine, exactly like its entry in `sess_run_tests`; register edits and the debugger
+    position do not influence it. It writes `null` for an interactive run and in a sandbox session,
+    and `abi.not_assembled` without a program.
+11. `sess_run_tests` in a sandbox session writes
+    `{"passed":false,"tests":[],"metrics":{…},"reference":null}`. For unpacked levels the reference
+    solution is run once per level (on first use) and cached for `reference`, for
+    `expect_screen = reference` and for `sess_reference_screen`.
+12. `sess_reference_screen` returns `0xFFFFFFFF` for a test index outside the level; the pointer stays
+    valid as long as the session exists.
+13. `sess_digest` with an invalid handle writes `{"error":"abi.bad_handle"}` (not 16 characters).

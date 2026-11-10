@@ -75,12 +75,7 @@ jobs:
           node-version: 24
       - run: rustup toolchain install
       - name: generate random programs and native digests
-        run: cargo run -q --release --frozen -p stapelwerk-cli -- fuzz-gen --seed "$GITHUB_RUN_NUMBER" --count 200 --out target/fuzz
+        run: cargo run -q --release --frozen -p stapelwerk-cli -- fuzz-gen --seed "$GITHUB_RUN_NUMBER" --count 300 --out target/fuzz
+      - run: npm run build
       - name: differential test native vs. WebAssembly
-        run: |
-          if [ -f test/fuzz/differential.mjs ]; then
-            npm run build
-            node test/fuzz/differential.mjs target/fuzz
-          else
-            echo "::notice::differential test (test/fuzz/differential.mjs) does not exist yet, skipped"
-          fi
+        run: node tools/differential.mjs target/fuzz

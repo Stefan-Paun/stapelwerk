@@ -28,6 +28,10 @@ step('cargo clippy -D warnings', () =>
 step('cargo test', () => run('cargo', ['test', '--workspace', '--locked']));
 step('build (wasm + dist)', () => run(process.execPath, [path.join('tools', 'build.mjs')]));
 
+step('differential native vs. WASM (fuzz-gen, N = 50)', () =>
+  run(process.execPath, [path.join('tools', 'differential.mjs'), '--seed', '1', '--count', '50']),
+);
+
 step('check-levels --strict --mutate', () =>
   run('cargo', ['run', '-q', '--release', '--locked', '-p', 'stapelwerk-cli', '--', 'check-levels', '--strict', '--mutate', 'levels']),
 );

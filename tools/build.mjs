@@ -1,7 +1,7 @@
 // Builds the static site into dist/:
 //   dist/wasm/stapelwerk.wasm  (cargo release build for wasm32, paths remapped)
 //   dist/...                   (copy of web/, if it exists)
-//   dist/levels/               (packed levels, once `stapelwerk pack-levels` exists)
+//   dist/levels/               (`stapelwerk pack-levels levels dist/levels`: packed .lvl + index.json)
 // Later phases add: dist/en/index.html (from the German shell) and dist/sw.js (precache list).
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -31,8 +31,8 @@ if (code !== 0) fail('cargo build failed');
 
 const wasm = readFileSync(WASM_RAW);
 if (wasm.length > WASM_MAX_BYTES) fail(`stapelwerk.wasm is ${wasm.length} bytes, limit ${WASM_MAX_BYTES}`);
-for (const secret of [os.homedir(), ROOT]) {
-  if (secret.length > 1 && wasm.includes(Buffer.from(secret))) fail('stapelwerk.wasm contains a local path');
+for (const secret of [os.homedir(), ROOT, '/Users/', '/home/']) {
+  if (secret.length > 1 && wasm.includes(Buffer.from(secret))) fail(`stapelwerk.wasm contains a local path (${secret.startsWith('/') && secret.length < 8 ? secret : 'home or repository directory'})`);
 }
 
 // 2. Fresh dist/.
@@ -53,9 +53,10 @@ console.log(`build: dist/wasm/stapelwerk.wasm (${wasm.length} bytes)`);
 // 4. Levels.
 if (existsSync(path.join(ROOT, 'levels', 'manifest.txt'))) {
   const c = run('cargo', ['run', '-q', '--release', '--locked', '-p', 'stapelwerk-cli', '--', 'pack-levels', 'levels', path.join('dist', 'levels')]);
-  if (c === 2) console.warn('build: pack-levels is not implemented yet, levels skipped');
-  else if (c !== 0) fail('pack-levels failed');
-  else console.log('build: packed levels into dist/levels/');
+  if (c === 127) fail(cargoHint());
+  if (c !== 0) fail('pack-levels failed');
+  if (!existsSync(path.join(dist, 'levels', 'index.json'))) fail('pack-levels wrote no dist/levels/index.json');
+  console.log('build: packed levels into dist/levels/');
 } else {
   console.log('build: levels/ does not exist yet, skipped');
 }
