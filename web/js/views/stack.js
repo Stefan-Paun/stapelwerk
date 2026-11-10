@@ -39,10 +39,17 @@ export function createStack({ t }) {
         return [...label, el('span', { class: 'muted' }, ` → ${line ? t('stack.line', { line }) : hex(row.value, 4)}`)];
       }
       case 'local': return [t('stack.local'), el('span', { class: 'muted mono' }, ` [fp−${-row.offset}]`)];
-      default:
+      default: {
         if (f && row.offset > 4) return [t('stack.arg'), el('span', { class: 'muted mono' }, ` [fp+${row.offset}]`)];
         if (view.trapAddr !== null && row.value === view.trapAddr) return [t('stack.trap')];
+        if (view.isReturnAddr?.(row.value)) {
+          // A return address outside the frame chain, e.g. below a value that was never popped.
+          const line = view.lineOf(row.value);
+          return [el('span', { class: 'mono', 'aria-hidden': 'true' }, 'ret'), el('span', { class: 'sr-only' }, t('stack.ret')),
+            el('span', { class: 'muted' }, ` → ${t('stack.line', { line })}`)];
+        }
         return [t('stack.pushed')];
+      }
     }
   }
 
@@ -61,7 +68,7 @@ export function createStack({ t }) {
       // Rows are drawn high address first: "to" (higher) sits above "from".
       const yTop = b.offsetTop + b.offsetHeight / 2;
       const yBot = a.offsetTop + a.offsetHeight / 2;
-      const cls = `dim dim-${d.kind}`;
+      const cls = `dim dim-${d.kind}${d.frame === 0 ? ' dim-current' : ''}`;
       children.push(
         svg('line', { class: `${cls} dim-ext`, x1: x - 4, y1: yTop, x2: 56, y2: yTop }),
         svg('line', { class: `${cls} dim-ext`, x1: x - 4, y1: yBot, x2: 56, y2: yBot }),
@@ -69,7 +76,7 @@ export function createStack({ t }) {
         svg('line', { class: `${cls} dim-tick`, x1: x - 3.5, y1: yTop + 3.5, x2: x + 3.5, y2: yTop - 3.5 }),
         svg('line', { class: `${cls} dim-tick`, x1: x - 3.5, y1: yBot + 3.5, x2: x + 3.5, y2: yBot - 3.5 }),
         svg('text', { class: `${cls} dim-label`, x: x - 6, y: (yTop + yBot) / 2, 'text-anchor': 'end', 'dominant-baseline': 'middle' },
-          d.kind === 'ret' ? '+4' : `${d.bytes} B`),
+          d.kind === 'ret' ? 'fp+4' : `fp−${d.bytes}`),
       );
     }
     mount(dims, children);
@@ -100,8 +107,9 @@ export function createStack({ t }) {
           el('span', { class: 'frame-name mono' }, f.func ?? '?'),
           el('span', { class: 'muted' }, ` · ${row.frame === 0 ? t('stack.frameCurrent') : t('stack.frameN', { n: row.frame })}`))));
       }
+      const looseRet = row.kind !== 'ret' && row.kind !== 'oldfp' && row.kind !== 'local' && view.isReturnAddr?.(row.value);
       out.push(el('tr', {
-        class: [`k-${row.kind}`, row.isSp && 'is-sp', row.isFp && 'is-fp', row.changed && (view.quiet ? 'is-touched' : 'is-changed')],
+        class: [`k-${row.kind}`, looseRet && 'k-ret', row.isSp && 'is-sp', row.isFp && 'is-fp', row.changed && (view.quiet ? 'is-touched' : 'is-changed')],
         dataset: { addr: row.addr },
       },
       el('td', { class: 'c-ptr mono' }, [row.isFp ? 'fp' : '', row.isFp && row.isSp ? ' ' : '', row.isSp ? 'sp' : ''].join('')),
@@ -114,8 +122,16 @@ export function createStack({ t }) {
     mount(tbody, out);
     lastDims = frameDimensions({ sp: view.regs[9] }, frames);
     drawDims();
-    // Keep sp in view: it is the bottom row.
+    // Keep sp in view: it is the bottom row. Then back off to a whole row, so no half-hidden
+    // row peeks out under the sticky head.
     scroller.scrollTop = scroller.scrollHeight;
+    if (scroller.scrollTop > 0) {
+      const visTop = scroller.getBoundingClientRect().top + (table.tHead?.offsetHeight ?? 0);
+      for (const tr of tbody.rows) {
+        const r = tr.getBoundingClientRect();
+        if (r.bottom > visTop + 0.5) { if (r.top < visTop - 0.5) scroller.scrollTop -= visTop - r.top; break; }
+      }
+    }
   }
 
   if ('ResizeObserver' in globalThis) {

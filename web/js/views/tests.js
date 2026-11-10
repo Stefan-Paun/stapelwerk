@@ -3,19 +3,19 @@
 import { el, mount } from '../dom.js';
 import { icon } from '../icons.js';
 
-export function describeMismatch(t, m) {
+export function describeMismatch(t, m, num = String) {
   if (!m) return '';
   const args = { ...m.args };
   // The core names the status ("BUDGET_EXCEEDED"); the JS mock used the number 5.
   const budget = args.status === 'BUDGET_EXCEEDED' || args.status === 5;
   if (m.key === 'check.not_halted' && budget && args.hottest_line !== undefined) {
-    return t('check.not_halted_budget', { cycles: args.cycles, line: args.hottest_line, count: args.hottest_count });
+    return t('check.not_halted_budget', { cycles: num(args.cycles), line: args.hottest_line, count: args.hottest_count });
   }
   if (typeof args.addr === 'number') args.addr = `0x${(args.addr >>> 0).toString(16).toUpperCase().padStart(4, '0')}`;
   return t(m.key, args);
 }
 
-export function createTests({ t, onOpen, faultText }) {
+export function createTests({ t, num = String, onOpen, faultText }) {
   const list = el('ol', { class: 'tests' });
   const summary = el('p', { class: 'tests-summary' });
   const node = el('div', { class: 'tests-wrap' }, summary, list);
@@ -34,9 +34,9 @@ export function createTests({ t, onOpen, faultText }) {
         el('span', { class: 'test-mark' }, status === 'passed' ? icon('check', t('tests.passed')) : status === 'failed' ? icon('cross', t('tests.failed')) : el('span', { class: 'sr-only' }, t('tests.pending'))),
         el('span', { class: 'test-name mono' }, test.name),
         el('span', { class: 'test-io mono' }, io),
-        el('span', { class: 'test-cyc mono' }, r ? t('tests.cycles', { n: r.cycles }) : ''),
+        el('span', { class: 'test-cyc mono' }, r ? t('tests.cycles', { n: num(r.cycles) }) : ''),
         el('button', { type: 'button', class: 'btn btn-quiet btn-small', onclick: () => onOpen(i), 'aria-label': t('tests.openLabel', { name: test.name }) }, t('tests.open')),
-        r && !r.passed ? el('p', { class: 'test-why' }, r.fault ? faultText(r.fault) : describeMismatch(t, r.mismatch)) : null));
+        r && !r.passed ? el('p', { class: 'test-why' }, r.fault ? faultText(r.fault) : describeMismatch(t, r.mismatch, num)) : null));
     }
     const hiddenResults = result?.tests?.filter((r) => r.hidden) ?? [];
     const hiddenFailed = hiddenResults.filter((r) => !r.passed);
@@ -50,9 +50,9 @@ export function createTests({ t, onOpen, faultText }) {
           el('span', { class: 'test-mark' }, icon('cross')),
           el('span', { class: 'test-name mono' }, r.name),
           el('span', { class: 'test-io mono' }, r.input ? `${(r.input.in ?? []).join(' ')} → ${(r.input.out ?? []).join(' ')}` : ''),
-          el('span', { class: 'test-cyc mono' }, t('tests.cycles', { n: r.cycles })),
+          el('span', { class: 'test-cyc mono' }, t('tests.cycles', { n: num(r.cycles) })),
           el('button', { type: 'button', class: 'btn btn-quiet btn-small', onclick: () => onOpen(r.index) }, t('tests.open')),
-          el('p', { class: 'test-why' }, r.fault ? faultText(r.fault) : describeMismatch(t, r.mismatch))));
+          el('p', { class: 'test-why' }, r.fault ? faultText(r.fault) : describeMismatch(t, r.mismatch, num))));
       }
     }
     mount(list, rows);

@@ -312,14 +312,14 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
 .dbg-btn kbd, .dbg-primary kbd { margin-left: 2px; }
 .dbg-btn[aria-pressed='true'] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .dbg-btn[aria-pressed='true'] kbd { background: transparent; color: inherit; }
-.timeline { flex: 1; display: grid; grid-template-columns: auto minmax(60px, 1fr) minmax(0, auto); align-items: center; gap: var(--s3); min-width: 0; }
+.timeline { flex: 1; display: grid; grid-template-columns: auto minmax(120px, 1fr) minmax(0, auto); align-items: center; gap: var(--s3); min-width: 0; }
 .timeline-label { font-size: var(--fs-s); color: var(--ink-2); font-weight: 600; }
 .timeline-out { font-size: var(--fs-s); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .timeline-out .tl-step { color: var(--ink); }
 @media (max-width: 1599px) { .dbg-btn kbd { display: none; } }
-@media (max-width: 1439px) { .timeline-out .tl-cyc { display: none; } }
+@media (max-width: 1599px) { .timeline-out .tl-cyc { display: none; } }
 .test-pick { display: inline-flex; align-items: center; gap: var(--s2); font-size: var(--fs-s); color: var(--ink-2); font-weight: 600; }
-.test-select { font-family: var(--font-mono); font-size: var(--fs-s); min-height: 32px; }
+.test-select { font-family: var(--font-mono); font-size: var(--fs-s); min-height: 32px; max-width: 22ch; text-overflow: ellipsis; }
 
 /* the timeline as a ruler */
 .timeline-range { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; cursor: pointer; }
@@ -365,6 +365,9 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
 .pane-task { flex: 0 1 40%; min-height: 140px; }
 .pane-code { flex: 1 1 60%; min-height: 200px; }
 .ws[data-mode='sandbox'] .pane-task { flex-basis: 34%; }
+/* the result is the moment of the level: it gets the larger share of the column */
+.pane-task:has(.tabpanel:not([hidden]) > .result-wrap) { flex-basis: 62%; }
+.ws-col-a:has(.tabpanel:not([hidden]) > .result-wrap) .pane-code { flex-basis: 38%; }
 .pane-task .tabs { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .pane-task .tabpanels { flex: 1; min-height: 0; overflow: auto; }
 .pane-task .tabpanel { padding: var(--s3) var(--s4) var(--s4); }
@@ -388,9 +391,13 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
 
 .task { font-size: var(--fs-m); }
 .task p { line-height: 1.5; }
-.checklist { margin-top: var(--s4); padding-top: var(--s3); border-top: var(--w1) solid var(--rule-faint); }
+.checklist {
+  margin-top: var(--s4); padding: var(--s2) 0 var(--s1); border-top: var(--w2) solid var(--ink);
+  /* stays in view at the foot of the task pane while the text scrolls above it */
+  position: sticky; bottom: 0; background: var(--paper);
+}
 .checklist h3 { font-size: var(--fs-s); margin: 0 0 var(--s2); color: var(--ink-2); }
-.checklist ul { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s1); }
+.checklist ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, max-content)); gap: var(--s1) var(--s5); }
 .checklist li { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-s); color: var(--ink-2); }
 .checklist li.is-done { color: var(--ink); }
 .check-box { width: 16px; height: 16px; border: var(--w2) solid var(--ink-3); display: grid; place-items: center; flex: none; }
@@ -515,7 +522,7 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
 .reg dt { font-weight: 600; font-size: var(--fs-s); }
 .reg dd { margin: 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--s1); min-width: 0; }
 .reg-val {
-  display: inline-flex; align-items: baseline; justify-content: space-between; gap: var(--s3);
+  display: inline-flex; align-items: baseline; justify-content: flex-start; gap: var(--s2);
   flex: 1; min-width: 0; height: 22px; padding: 0 var(--s1);
   background: transparent; border: 0; border-radius: var(--radius); text-align: right;
 }
@@ -525,8 +532,10 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
 .reg-val[aria-disabled='true'] { cursor: default; }
 .reg.is-changed .reg-val { background: var(--hatch); }
 .reg.is-changed .reg-val .dec { color: var(--pencil); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
-.reg-old { font-size: var(--fs-xs); color: var(--pencil); text-decoration-thickness: 1.5px; opacity: 0.9; }
-.reg-input { width: 100%; height: 22px; min-height: 22px; text-align: right; font-size: var(--fs-s); border-color: var(--blue); }
+.reg-old { margin-left: auto; font-size: var(--fs-xs); color: var(--pencil); text-decoration-thickness: 1.5px; opacity: 0.9; white-space: nowrap; }
+/* after a run: the same quiet rule as for memory bytes (thin underline, old value in grey) */
+.reg.is-touched .reg-val .dec { text-decoration: underline; text-decoration-color: var(--ink-3); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+input.reg-input { width: 100%; height: 22px; min-height: 22px; text-align: right; font-size: var(--fs-s); border-color: var(--blue); }
 .reg-back { width: 24px; height: 24px; color: var(--ink-3); }
 .reg-back .icon { width: 15px; height: 15px; }
 .reg.is-sp dt, .reg.is-fp dt { color: var(--blue); }
@@ -544,23 +553,26 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
 .flag.is-on .flag-bit { color: var(--paper); opacity: 0.75; }
 .flag.is-changed { box-shadow: 0 2px 0 var(--pencil); }
 .flag.is-changed:not(.is-on) { background: var(--hatch); }
+.flag.is-touched { box-shadow: 0 1px 0 var(--ink-3); }
 .flag[aria-disabled='true'] { cursor: default; }
 
 /* ------------------------------------------------------------ stack */
 .pane-stack { flex: 1; }
 .stack-scroll { flex: 1; min-height: 0; overflow: auto; }
-.stack-wrap { display: grid; grid-template-columns: 56px minmax(0, 1fr); padding: 0 var(--s4) var(--s2) 0; }
+.stack-wrap { display: grid; grid-template-columns: 56px minmax(0, 1fr); padding: 0 var(--s4) 28px 0; } /* room below sp for the whole-row scroll */
 .dims { width: 56px; overflow: visible; }
 .dim { stroke: var(--ink); stroke-width: 1.25; fill: none; }
 .dim-ext { stroke: var(--rule-mid); stroke-width: 0.8; }
 .dim-tick { stroke-width: 1.4; }
-.dim-ret { stroke: var(--blue); }
+.dim-ret.dim-current:not(.dim-label) { stroke: var(--blue); }
 .dim-label { fill: var(--ink); stroke: none; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; }
-.dim-ret.dim-label { fill: var(--blue); }
+.dim-ret.dim-current.dim-label { fill: var(--blue); }
 .stack { width: 100%; border-collapse: collapse; font-size: var(--fs-s); }
 .stack th, .stack td { text-align: left; padding: 0 var(--s2) 0 0; height: 24px; border-bottom: var(--w1) solid var(--rule-faint); white-space: nowrap; }
 .stack thead th { font-size: var(--fs-xs); font-weight: 650; color: var(--ink-3); height: 26px; position: sticky; top: 0; background-color: var(--paper); background-image: none; z-index: 3; box-shadow: 0 1px 0 var(--rule-faint); }
 .stack-scroll { background: var(--paper); }
+/* the sticky head also covers the dimension column, so chains slide under it */
+.stack thead th.c-ptr::before { content: ''; position: absolute; top: 0; bottom: 0; right: 100%; width: 56px; background: var(--paper); box-shadow: 0 1px 0 var(--rule-faint); }
 .stack .c-ptr { width: 4ch; color: var(--blue); font-size: var(--fs-xs); font-weight: 600; text-align: right; padding-right: var(--s2); }
 .stack .c-addr { font-weight: 400; color: var(--ink-3); width: 6ch; }
 .stack .c-val { font-weight: 500; }
@@ -868,6 +880,7 @@ html[data-view='level'] body, html[data-view='sandbox'] body { overflow: hidden;
   .ws[data-mtab='console'] .pane-console,
   .ws[data-mtab='mem'] .pane-mem { display: flex; }
   .pane-task .tabpanels, .stack-scroll, .hex-scroll { overflow: visible; }
+  .checklist { position: static; }
   .pane-code { min-height: calc(100dvh - var(--appbar-h) - 220px); }
   .ed-palette { display: flex; gap: var(--s1); overflow-x: auto; padding: var(--s2); border-top: var(--w1) solid var(--rule-faint); background: var(--paper-2); scrollbar-width: none; flex: none; }
   .ed-palette .chip { min-height: 40px; min-width: 40px; justify-content: center; font-family: var(--font-mono); background: var(--paper-3); }

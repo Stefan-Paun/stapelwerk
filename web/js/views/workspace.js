@@ -25,10 +25,16 @@ const TUTORIAL_ITEMS = ['step', 'breakpoint', 'run', 'back'];
 
 export function faultText(t, fault) {
   const args = { ...fault.args };
+  const raw = typeof args.addr === 'number' ? args.addr >>> 0 : null;
   for (const k of ['addr', 'target', 'sp']) if (k in args) args[k] = `0x${hex(args[k], 4)}`;
   if ('word' in args) args.word = `0x${hex(args.word)}`;
   if ('access' in args) args.access = t(`access.${args.access}`);
-  return t(fault.key, args);
+  let text = t(fault.key, args);
+  // An address made of the heap fill patterns points at the real cause: a pointer that was
+  // read from freed (DD) or never written (CD) heap memory.
+  if (raw !== null && raw >>> 16 === 0xDDDD) text += ` ${t('fill.freed')}`;
+  else if (raw !== null && raw >>> 16 === 0xCDCD) text += ` ${t('fill.unwritten')}`;
+  return text;
 }
 
 function diagText(t, d) {
@@ -62,6 +68,7 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
     lineToAddr: new Map(),
     addrToLine: new Map(),
     labels: new Map(),
+    afterCall: new Map(),
     trapAddr: null,
     hints: 0,
     notice: null,
@@ -117,7 +124,7 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
   // Task pane
   const taskBody = el('div', { class: 'task prose' });
   const hintsBody = el('div', { class: 'hints prose' });
-  const tests = createTests({ t, onOpen: (i) => openTest(i), faultText: (f) => faultText(t, f) });
+  const tests = createTests({ t, num: app.i18n.num, onOpen: (i) => openTest(i), faultText: (f) => faultText(t, f) });
   const resultBody = el('div', { class: 'result-wrap' });
   let taskTabs = null;
   let taskPane;
@@ -244,6 +251,7 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
       ui.addrToLine.set(e.a, e.l);
     }
     ui.labels.clear();
+    ui.afterCall.clear();
     ui.trapAddr = null;
     for (const s of session.symbols()) {
       if (s.name === '__trap') ui.trapAddr = s.value;
@@ -513,6 +521,13 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
     const tutorialMissing = level.kind === 'tutorial' && !progress.tutorialDone(level.id);
     if (result.passed && !tutorialMissing) {
       progress.markSolved(level.id, result.metrics, result.reference);
+      // Show the solved machine, not an empty one: play the selected test to its end
+      // (it passed, so it halts within its budget). Back and the timeline still reach every step.
+      if (resetStatus !== STATUS.ERROR) {
+        for (let i = 0; i < 200 && session.run(RUN_SLICE) === STATUS.PAUSED; i++);
+        ui.prev = null;
+        diff();
+      }
       setNotice('ok', t('notice.solved'));
       showResult(result, false);
       taskTabs.select('result');
@@ -574,6 +589,14 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
   }
 
   // ------------------------------------------------------------ rendering
+  // A pushed value that points just behind a `call` is a return address, even without a frame
+  // (that is exactly what a forgotten pop leaves on top of it).
+  function isReturnAddr(a) {
+    if (!ui.addrToLine.has(a) || !ui.addrToLine.has(a - 4)) return false;
+    if (!ui.afterCall.has(a)) ui.afterCall.set(a, /^call\b/.test(session.disasm(a - 4, 1)[0]?.text ?? ''));
+    return ui.afterCall.get(a);
+  }
+
   function statusText() {
     const st = session.state();
     if (st.status === STATUS.NOT_ASSEMBLED || ui.assembledSource === null) return t('status.not_assembled');
@@ -587,6 +610,8 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
     const canGo = assembled && (st.status === STATUS.PAUSED || st.status === STATUS.BREAKPOINT);
     mount(runBtn, icon(ui.running ? 'pause' : 'run'), el('span', { class: 'btn-label' }, ui.running ? t('dbg.pause') : t('dbg.run')), el('kbd', { 'aria-hidden': 'true' }, 'L'));
     runBtn.setAttribute('aria-pressed', ui.running ? 'true' : 'false');
+    // After halt, a fault or an exhausted budget only Restart or Back lead on; Run says so by its look.
+    runBtn.setAttribute('aria-disabled', ui.running || canGo || !assembled ? 'false' : 'true');
     stepBtn.setAttribute('aria-disabled', canGo || !assembled ? 'false' : 'true');
     backBtn.setAttribute('aria-disabled', assembled && st.steps > 0 ? 'false' : 'true');
     const horizon = Math.max(session.horizon?.() ?? st.steps, st.steps);
@@ -629,12 +654,12 @@ export async function renderWorkspace(app, { levelId = null, sandbox = false, in
     const counts = new Map(assembled ? session.lineCounts() : []);
     editor.update({ current: assembled && st.status !== STATUS.HALTED ? line : null, hot: ui.hotLine, errors: ui.diagnostics, counts, breakpoints: ui.bpLines, codeLines: new Set(ui.lineToAddr.keys()) });
     const editable = assembled && !ui.running && (st.status === STATUS.PAUSED || st.status === STATUS.BREAKPOINT);
-    registers.update({ regs: st.regs, flags: st.flags, pc: st.pc, line, prevRegs: ui.prev?.regs, prevFlags: ui.prev?.flags, changedRegs: ui.changedRegs, editable, canTravel: assembled && st.steps > 0 && !ui.running });
+    registers.update({ regs: st.regs, flags: st.flags, pc: st.pc, line, prevRegs: ui.prev?.regs, prevFlags: ui.prev?.flags, changedRegs: ui.changedRegs, quiet: ui.quietBytes, editable, canTravel: assembled && st.steps > 0 && !ui.running });
     const frames = assembled ? session.frames() : [];
     const mtab = root.dataset.mtab;
     const narrow = matchMedia('(max-width: 759px)').matches;
     const visible = (id) => !narrow || mtab === id;
-    if (visible('stack')) stack.update({ mem, regs: st.regs, frames, changedBytes: ui.changedBytes, quiet: ui.quietBytes, assembled, lineOf: (a) => ui.addrToLine.get(a) ?? null, trapAddr: ui.trapAddr });
+    if (visible('stack')) stack.update({ mem, regs: st.regs, frames, changedBytes: ui.changedBytes, quiet: ui.quietBytes, assembled, lineOf: (a) => ui.addrToLine.get(a) ?? null, isReturnAddr, trapAddr: ui.trapAddr });
     if (ui.expectedFor !== ui.testIndex) {
       ui.expectedFor = ui.testIndex;
       ui.expected = level && ui.testIndex >= 0 && level.tests[ui.testIndex]?.screen ? session.referenceScreen?.(ui.testIndex) ?? null : null;

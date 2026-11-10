@@ -91,6 +91,10 @@ export function createEditor({ t, value = '', label, onInput, onToggleBreakpoint
   }
 
   function syncScroll() {
+    // Gutter and backdrop only move by transform; an overflow:hidden box can still be scrolled
+    // by script (scrollIntoView, find-in-page), which would shift them against the text.
+    if (gutter.scrollTop) gutter.scrollTop = 0;
+    if (back.scrollTop || back.scrollLeft) { back.scrollTop = 0; back.scrollLeft = 0; }
     gutterInner.style.transform = `translateY(${-area.scrollTop}px)`;
     backInner.style.transform = `translate(${-area.scrollLeft}px, ${-area.scrollTop}px)`;
   }
@@ -117,12 +121,16 @@ export function createEditor({ t, value = '', label, onInput, onToggleBreakpoint
     const lh = parseFloat(getComputedStyle(area).lineHeight) || 20;
     const top = (line - 1) * lh;
     if (top < area.scrollTop + lh || top > area.scrollTop + area.clientHeight - 2 * lh) {
-      area.scrollTop = Math.max(0, top - area.clientHeight / 3);
+      // Whole lines only: the first visible line is never cut at the top.
+      const pad = parseFloat(getComputedStyle(area).paddingTop) || 0;
+      area.scrollTop = Math.max(0, pad + Math.round((top - area.clientHeight / 3) / lh) * lh);
       syncScroll();
     }
   }
 
   area.addEventListener('scroll', syncScroll);
+  gutter.addEventListener('scroll', syncScroll);
+  back.addEventListener('scroll', syncScroll);
   area.addEventListener('input', () => { renderLines(); onInput?.(area.value); });
   area.addEventListener('keydown', (ev) => {
     if (ev.key === 'Tab' && !ev.shiftKey && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {

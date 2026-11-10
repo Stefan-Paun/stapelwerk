@@ -16,7 +16,15 @@ export function createHexdump({ t }) {
 
   const segButtons = SHOWN.map((name) => el('button', {
     type: 'button', class: ['chip', `seg-${name}`], dataset: { seg: name }, 'aria-pressed': name === segment ? 'true' : 'false',
-    onclick: () => { segment = name; autoFollow = false; for (const b of segButtons) b.setAttribute('aria-pressed', b.dataset.seg === name ? 'true' : 'false'); scroller.scrollTop = 0; draw(); },
+    onclick: () => {
+      segment = name;
+      autoFollow = false;
+      for (const b of segButtons) b.setAttribute('aria-pressed', b.dataset.seg === name ? 'true' : 'false');
+      scroller.scrollTop = 0;
+      // The stack grows down from its top end: open it where sp is, not at the empty bottom.
+      if (name === 'stack' && view) { sizeSpacer(); reveal(view.sp >>> 0); }
+      draw();
+    },
   }, el('i', { class: 'seg-swatch', 'aria-hidden': 'true' }), t(`seg.${name}`)));
   const modeButtons = ['byte', 'word'].map((m) => el('button', {
     type: 'button', class: 'seg-btn', dataset: { mode: m }, 'aria-pressed': m === mode ? 'true' : 'false',
@@ -36,8 +44,7 @@ export function createHexdump({ t }) {
     if (!view) return;
     const seg = SEGMENTS.find((s) => s.name === segment);
     range.textContent = `${t(`seg.${segment}`)} · ${hex(seg.from, 4)}–${hex(seg.to - 1, 4)} · ${t(`seg.rights.${segment}`)}`;
-    const total = (seg.to - seg.from) / ROW_BYTES;
-    spacer.style.height = `${total * ROW_H}px`;
+    sizeSpacer();
     const first = Math.max(0, Math.floor(scroller.scrollTop / ROW_H) - 4);
     const count = Math.ceil((scroller.clientHeight || 300) / ROW_H) + 8;
     const from = seg.from + first * ROW_BYTES;
@@ -53,6 +60,22 @@ export function createHexdump({ t }) {
       el('span', { class: 'hex-label', role: 'cell' }, r.label ?? ''))));
   }
 
+  // Sized before scrolling, so a new scroll position is not clamped to the old segment's height.
+  function sizeSpacer() {
+    const seg = SEGMENTS.find((s) => s.name === segment);
+    spacer.style.height = `${((seg.to - seg.from) / ROW_BYTES) * ROW_H}px`;
+  }
+
+  /** Scrolls the row holding `addr` into view (a few rows of context above it), if it is not visible. */
+  function reveal(addr) {
+    const seg = SEGMENTS.find((s) => s.name === segment);
+    if (!seg || addr < seg.from || addr >= seg.to) return;
+    const y = Math.floor((addr - seg.from) / ROW_BYTES) * ROW_H;
+    const h = scroller.clientHeight || 300;
+    if (y >= scroller.scrollTop && y + ROW_H <= scroller.scrollTop + h) return;
+    scroller.scrollTop = Math.max(0, Math.floor((y - Math.max(ROW_H, h / 3)) / ROW_H) * ROW_H);
+  }
+
   scroller.addEventListener('scroll', () => requestAnimationFrame(draw));
 
   return {
@@ -66,6 +89,10 @@ export function createHexdump({ t }) {
         if (seg && SHOWN.includes(seg.name) && seg.name !== segment) {
           segment = seg.name;
           for (const b of segButtons) b.setAttribute('aria-pressed', b.dataset.seg === segment ? 'true' : 'false');
+        }
+        if (seg && seg.name === segment) {
+          sizeSpacer();
+          reveal(a);
         }
       }
       draw();

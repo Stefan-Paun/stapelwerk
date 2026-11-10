@@ -525,6 +525,8 @@ The CPU is invented. It has no pipeline and no cache model. What a level says ab
   'fault.guard_page': '{access} at address {addr}: guard zone between heap and stack.',
   'fault.write_to_code': 'Write to {addr}: code must not be changed.',
   'fault.misaligned': 'Address {addr} is not aligned for a {size}-byte access (·4?).',
+  'fill.freed': 'The pattern DD… fills freed heap memory: the pointer probably came from a block that had already been freed.',
+  'fill.unwritten': 'The pattern CD… fills heap memory that was requested but never written: a field was probably read before it was set.',
   'fault.stack_overflow': 'Stack overflow: sp would be {sp}.',
   'fault.stack_underflow': 'Stack underflow: sp would be {sp}. More pop than push?',
   'fault.stack_misaligned': 'sp {sp} is not divisible by 4.',

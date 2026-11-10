@@ -53,6 +53,8 @@ export function createRegisters({ t, onSetReg, onBackToChange }) {
   function regRow(i, view) {
     const value = view.regs[i] >>> 0;
     const changed = view.changedRegs.has(i);
+    // After a run the change is underlined quietly instead of hatched, like memory bytes.
+    const mark = changed ? (view.quiet ? 'is-touched' : 'is-changed') : null;
     const before = view.prevRegs?.[i];
     const name = REG_NAMES[i];
     let valueNode;
@@ -64,7 +66,12 @@ export function createRegisters({ t, onSetReg, onBackToChange }) {
         dataset: { reg: i },
         'aria-label': t('regs.editLabel', { reg: name }),
         onkeydown: (ev) => {
-          if (ev.key === 'Enter') { ev.preventDefault(); if (!commit(i, ev.target.value)) ev.target.setAttribute('aria-invalid', 'true'); }
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            // The input is replaced by the value button again: keep the focus on that row.
+            if (commit(i, ev.target.value)) list.querySelector(`button[data-reg="${i}"]`)?.focus();
+            else ev.target.setAttribute('aria-invalid', 'true');
+          }
           if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); editing = null; render(last); list.querySelector(`button[data-reg="${i}"]`)?.focus(); }
         },
         onblur: (ev) => { if (editing === i) { commit(i, ev.target.value); editing = null; render(last); } },
@@ -81,12 +88,16 @@ export function createRegisters({ t, onSetReg, onBackToChange }) {
         onclick: () => { if (view.editable) startEdit(i, value); },
       },
       el('span', { class: 'hex mono' }, hex(value)),
+      // The overwritten value sits between hex and decimal, so neither column ever shifts.
+      // It is shown after a single step only; after a run the change is just underlined.
+      mark === 'is-changed' && before !== undefined
+        ? el('s', { class: 'reg-old mono', 'aria-hidden': 'true' }, String(signed(before)))
+        : el('span', { class: 'reg-old', 'aria-hidden': 'true' }),
       el('span', { class: 'dec mono' }, String(signed(value))));
     }
-    return el('div', { class: ['reg', changed && 'is-changed', i === 9 && 'is-sp', i === 8 && 'is-fp'] },
+    return el('div', { class: ['reg', mark, i === 9 && 'is-sp', i === 8 && 'is-fp'] },
       el('dt', { class: 'mono' }, name),
       el('dd', {},
-        changed && before !== undefined ? el('s', { class: 'reg-old mono', 'aria-hidden': 'true' }, String(signed(before))) : null,
         valueNode,
         el('button', {
           type: 'button',
@@ -110,7 +121,7 @@ export function createRegisters({ t, onSetReg, onBackToChange }) {
       const changed = ((view.flags ^ (view.prevFlags ?? view.flags)) >> bit) & 1;
       return el('button', {
         type: 'button',
-        class: ['flag', on && 'is-on', changed && 'is-changed'],
+        class: ['flag', on && 'is-on', changed && (view.quiet ? 'is-touched' : 'is-changed')],
         'aria-pressed': on ? 'true' : 'false',
         'aria-disabled': view.editable ? null : 'true',
         'aria-label': t('regs.flagLabel', { flag: name, meaning: t(`regs.flag.${name}`), value: on }),

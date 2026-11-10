@@ -526,6 +526,8 @@ Die CPU ist erfunden. Sie hat kein Pipeline- und kein Cache-Modell. Was ein Leve
   'fault.guard_page': '{access} an Adresse {addr}: Schutzbereich zwischen Heap und Stack.',
   'fault.write_to_code': 'Schreiben nach {addr}: Code darf nicht verändert werden.',
   'fault.misaligned': 'Adresse {addr} ist für einen Zugriff mit {size} Bytes nicht ausgerichtet (·4?).',
+  'fill.freed': 'Das Muster DD… füllt freigegebenen Heap-Speicher: Vermutlich stammt der Zeiger aus einem Block, der schon freigegeben war.',
+  'fill.unwritten': 'Das Muster CD… füllt angeforderten, aber noch nie beschriebenen Heap-Speicher: Vermutlich wurde ein Feld gelesen, bevor es gesetzt war.',
   'fault.stack_overflow': 'Stapelüberlauf: sp wäre {sp}.',
   'fault.stack_underflow': 'Stapelunterlauf: sp wäre {sp}. Mehr pop als push?',
   'fault.stack_misaligned': 'sp {sp} ist nicht durch 4 teilbar.',
