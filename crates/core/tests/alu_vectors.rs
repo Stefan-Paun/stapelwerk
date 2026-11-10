@@ -109,9 +109,7 @@ fn vectors_parse_and_cover_every_op() {
     }
 }
 
-/// Enable in phase 1A (remove `#[ignore]`) once `cpu::alu` is implemented.
 #[test]
-#[ignore = "phase 1A: cpu::alu is still a placeholder"]
 fn vectors_match_cpu_alu() {
     for v in parse() {
         let got = cpu::alu(v.op, v.a, v.b);

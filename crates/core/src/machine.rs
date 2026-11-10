@@ -5,11 +5,9 @@
 //! the tapes only ever grow and are shared by all snapshots. Rewinding truncates the visible output
 //! to `state.out_len`.
 //!
-//! PHASE 1A owns this file. Placeholders are marked `PHASE 1A`.
-
 use crate::consts::{DEFAULT_BUDGET, ENTRY, STACK_TOP};
 use crate::cpu;
-use crate::fault::Fault;
+use crate::fault::{Access, Fault, FaultKind};
 use crate::heap::{Heap, HeapCheck};
 use crate::isa::Reg;
 use crate::mem::Memory;
@@ -212,11 +210,138 @@ impl MachineState {
         self.fault = other.fault;
     }
 
-    /// FNV-1a-64 over the whole state (registers, flags, pc, memory, heap blocks and shadow,
-    /// RNG, counters, status, output up to `out_len`, read positions). The field order is part of
-    /// the differential test between native and WASM and must not change once defined. PHASE 1A.
-    pub fn digest(&self, _tapes: &Tapes) -> u64 {
-        0
+    /// FNV-1a-64 over the whole state. The field order is part of the differential test between
+    /// native and WASM and must not change once defined:
+    ///
+    /// 1. registers r0…r7, fp, sp (u32 each), pc, flags
+    /// 2. memory (65536 bytes), code end (u32)
+    /// 3. heap shadow (4096 bytes), number of blocks (u32), per block addr, size, live (u8),
+    ///    alloc_pc
+    /// 4. RNG state (u32), steps (u64), cycles (u64), in_int_pos, in_text_pos, out_len (u32 each)
+    /// 5. status code (u32); fault: 0 (u8) or 1 (u8) + code, first argument, access/size, pc
+    ///    (u32 each) and step (u64)
+    /// 6. output tape entries `0..out_len`: kind (u8), value (i32)
+    ///
+    /// All integers little-endian.
+    pub fn digest(&self, tapes: &Tapes) -> u64 {
+        let mut h = Fnv::new();
+        for r in self.regs {
+            h.u32(r);
+        }
+        h.u32(self.pc);
+        h.u32(self.flags);
+        h.bytes(self.mem.bytes());
+        h.u32(self.mem.code_end());
+        h.bytes(self.heap.shadow());
+        h.u32(self.heap.blocks().len() as u32);
+        for b in self.heap.blocks() {
+            h.u32(b.addr);
+            h.u32(b.size);
+            h.bytes(&[b.live as u8]);
+            h.u32(b.alloc_pc);
+        }
+        h.u32(self.rng);
+        h.u64(self.steps);
+        h.u64(self.cycles);
+        h.u32(self.in_int_pos);
+        h.u32(self.in_text_pos);
+        h.u32(self.out_len);
+        h.u32(self.status.code());
+        match self.fault {
+            None => h.bytes(&[0]),
+            Some(f) => {
+                h.bytes(&[1]);
+                h.u32(f.kind.code());
+                h.u32(f.kind.addr());
+                h.u32(fault_extra(&f.kind));
+                h.u32(f.pc);
+                h.u64(f.step);
+            }
+        }
+        for i in 0..self.out_len as usize {
+            h.bytes(&[tapes.out_kinds.get(i).copied().unwrap_or(0)]);
+            h.u32(tapes.out_vals.get(i).copied().unwrap_or(0) as u32);
+        }
+        h.finish()
+    }
+}
+
+/// Second fault argument for the digest: access (0 = r, 1 = w) or size, else 0.
+fn fault_extra(kind: &FaultKind) -> u32 {
+    match *kind {
+        FaultKind::NullAccess { access, .. }
+        | FaultKind::OutOfRange { access, .. }
+        | FaultKind::GuardPage { access, .. } => match access {
+            Access::Read => 0,
+            Access::Write => 1,
+        },
+        FaultKind::Misaligned { size, .. } => size,
+        _ => 0,
+    }
+}
+
+/// FNV-1a, 64 bit.
+struct Fnv(u64);
+
+impl Fnv {
+    const OFFSET: u64 = 0xCBF2_9CE4_8422_2325;
+    const PRIME: u64 = 0x0000_0100_0000_01B3;
+
+    fn new() -> Self {
+        Fnv(Self::OFFSET)
+    }
+
+    fn bytes(&mut self, data: &[u8]) {
+        let mut h = self.0;
+        for &b in data {
+            h ^= b as u64;
+            h = h.wrapping_mul(Self::PRIME);
+        }
+        self.0 = h;
+    }
+
+    fn u32(&mut self, v: u32) {
+        self.bytes(&v.to_le_bytes());
+    }
+
+    fn u64(&mut self, v: u64) {
+        self.bytes(&v.to_le_bytes());
+    }
+
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+
+/// Hook into [`Machine::run_observed`]: breakpoints and per-instruction bookkeeping (line
+/// counters, `hottest_line`). Both methods default to doing nothing, so the plain run loop pays
+/// nothing for them.
+pub trait RunObserver {
+    /// Called before every instruction except the first one of the call; `true` stops the run
+    /// with [`Status::Breakpoint`] before the instruction at `pc` executes.
+    #[inline]
+    fn should_break(&mut self, _pc: u32) -> bool {
+        false
+    }
+
+    /// Called after every completed instruction (including `halt`) with its address.
+    #[inline]
+    fn executed(&mut self, _pc: u32) {}
+}
+
+/// Observer that does nothing (plain `run`).
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NoObserver;
+
+impl RunObserver for NoObserver {}
+
+/// Observer that stops at the addresses of a sorted breakpoint list.
+#[derive(Clone, Copy, Debug)]
+pub struct Breakpoints<'a>(pub &'a [u32]);
+
+impl RunObserver for Breakpoints<'_> {
+    fn should_break(&mut self, pc: u32) -> bool {
+        self.0.binary_search(&pc).is_ok()
     }
 }
 
@@ -242,15 +367,73 @@ impl Machine {
         }
     }
 
-    /// Executes one instruction (ignores breakpoints, respects the budget). PHASE 1A.
+    /// Executes one instruction (ignores breakpoints, respects the budget). A machine that is
+    /// halted, faulted or out of budget does nothing and returns its status; `Breakpoint` and
+    /// `WaitingInput` resume (a still-empty input just yields `WaitingInput` again).
     pub fn step(&mut self) -> Status {
+        if !self.resume() {
+            return self.state.status;
+        }
+        if self.state.cycles >= self.config.budget {
+            self.state.status = Status::BudgetExceeded;
+            return Status::BudgetExceeded;
+        }
         cpu::step(&mut self.state, &mut self.tapes, &self.config)
     }
 
     /// Runs until the status is no longer `Paused`, the budget is exhausted, or at least
-    /// `max_cycles` more cycles were consumed (time slice; returns `Paused` then). PHASE 1A.
-    pub fn run(&mut self, _max_cycles: u64) -> Status {
-        self.state.status
+    /// `max_cycles` more cycles were consumed (time slice; returns `Paused` then). At least one
+    /// instruction is attempted per call, so `max_cycles = 0` behaves like a single step.
+    pub fn run(&mut self, max_cycles: u64) -> Status {
+        self.run_observed(max_cycles, &mut NoObserver)
+    }
+
+    /// [`Machine::run`] with a hook for breakpoints and per-instruction bookkeeping (phase 2:
+    /// sessions). The observer is never asked about the first instruction of the call, so a run
+    /// started on a breakpoint moves on.
+    pub fn run_observed<O: RunObserver>(&mut self, max_cycles: u64, obs: &mut O) -> Status {
+        if !self.resume() {
+            return self.state.status;
+        }
+        let start = self.state.cycles;
+        let budget = self.config.budget;
+        let mut first = true;
+        loop {
+            if self.state.cycles >= budget {
+                self.state.status = Status::BudgetExceeded;
+                return Status::BudgetExceeded;
+            }
+            let pc = self.state.pc;
+            if !first && obs.should_break(pc) {
+                self.state.status = Status::Breakpoint;
+                return Status::Breakpoint;
+            }
+            first = false;
+            let steps = self.state.steps;
+            let status = cpu::step(&mut self.state, &mut self.tapes, &self.config);
+            if self.state.steps != steps {
+                obs.executed(pc);
+            }
+            if status != Status::Paused {
+                return status;
+            }
+            if self.state.cycles - start >= max_cycles {
+                return Status::Paused;
+            }
+        }
+    }
+
+    /// Prepares a stopped-but-resumable machine for the next instruction. `false` if the run is
+    /// over (halted, faulted, budget exceeded, not assembled).
+    fn resume(&mut self) -> bool {
+        match self.state.status {
+            Status::Paused => true,
+            Status::Breakpoint | Status::WaitingInput => {
+                self.state.status = Status::Paused;
+                true
+            }
+            Status::Halted | Status::Fault | Status::BudgetExceeded | Status::NotAssembled => false,
+        }
     }
 }
 
