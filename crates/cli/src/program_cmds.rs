@@ -3,9 +3,10 @@
 use crate::args::Parsed;
 use crate::messages;
 use stapelwerk_core::asm::{MnemonicFilter, assemble};
-use stapelwerk_core::consts::{OUT_KIND_INT, TEXT_START};
+use stapelwerk_core::consts::{MAX_BUDGET, OUT_KIND_INT, TEXT_START};
 use stapelwerk_core::diag::FILE_PLAYER;
 use stapelwerk_core::disasm::{disasm_word, format_instr_labeled};
+use stapelwerk_core::heap::HeapCheck;
 use stapelwerk_core::isa::decode;
 use stapelwerk_core::isa::{FLAG_C, FLAG_N, FLAG_V, FLAG_Z, Reg};
 use stapelwerk_core::level::parse_int;
@@ -54,7 +55,7 @@ pub fn read_image(bytes: &[u8]) -> Result<(Vec<u32>, Vec<u8>), String> {
     Ok((words, body[text as usize..].to_vec()))
 }
 
-fn read_text(path: &str, err: &mut dyn Write) -> Option<String> {
+pub(crate) fn read_text(path: &str, err: &mut dyn Write) -> Option<String> {
     match std::fs::read(path) {
         Ok(b) => Some(String::from_utf8_lossy(&b).into_owned()),
         Err(e) => {
@@ -64,16 +65,40 @@ fn read_text(path: &str, err: &mut dyn Write) -> Option<String> {
     }
 }
 
+/// Where library diagnostics point: a name and the file line of the library's first line.
+pub(crate) struct LibraryName<'a> {
+    pub name: &'a str,
+    pub first_line: u32,
+}
+
+/// Prints assembler diagnostics: file 0 under `path`, file 1 (library) under `library`.
+pub(crate) fn print_diags(
+    path: &str,
+    library: Option<&LibraryName<'_>>,
+    diags: &[stapelwerk_core::diag::Diagnostic],
+    err: &mut dyn Write,
+) {
+    for d in diags {
+        let line = match (d.file, library) {
+            (stapelwerk_core::diag::FILE_LIBRARY, Some(lib)) => {
+                let mut d = d.clone();
+                d.line = lib.first_line + d.line.saturating_sub(1);
+                format!("{} [library]", messages::diagnostic(lib.name, &d))
+            }
+            _ => messages::diagnostic(path, d),
+        };
+        let _ = writeln!(err, "{line}");
+    }
+    let _ = writeln!(err, "stapelwerk: {} error(s) in '{path}'", diags.len());
+}
+
 /// Assembles a file without library; prints diagnostics on failure.
 fn assemble_file(path: &str, err: &mut dyn Write) -> Result<Program, u8> {
     let src = read_text(path, err).ok_or(1u8)?;
     match assemble(&src, None, &MnemonicFilter::All) {
         Ok(p) => Ok(p),
         Err(diags) => {
-            for d in &diags {
-                let _ = writeln!(err, "{}", messages::diagnostic(path, d));
-            }
-            let _ = writeln!(err, "stapelwerk: {} error(s) in '{path}'", diags.len());
+            print_diags(path, None, &diags, err);
             Err(1)
         }
     }
@@ -213,8 +238,69 @@ pub fn format_output(m: &Machine) -> Vec<u8> {
     out
 }
 
+/// " (line N)" or " (library line N)" for the instruction at `pc`, empty if unknown.
+pub(crate) fn line_note(program: &Program, pc: u32) -> String {
+    match program.line_of(pc) {
+        Some(e) if e.file == FILE_PLAYER => format!(" (line {})", e.line),
+        Some(e) => format!(" (library line {})", e.line),
+        None => String::new(),
+    }
+}
+
+/// Options shared by both forms of `run`.
+pub(crate) struct RunOptions {
+    pub budget: Option<u64>,
+    pub heap_check: Option<HeapCheck>,
+    pub trace: bool,
+}
+
+fn usage_error(err: &mut dyn Write, msg: &str) -> u8 {
+    let _ = writeln!(err, "stapelwerk: {msg}");
+    2
+}
+
 pub fn cmd_run(p: &Parsed, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let path = &p.positional[0];
+    let budget = match p.value("--budget") {
+        None => None,
+        Some(s) => match parse_int(s).filter(|v| (1..=MAX_BUDGET as i64).contains(v)) {
+            Some(v) => Some(v as u64),
+            None => {
+                return usage_error(
+                    err,
+                    &format!("--budget: '{s}' is not a number 1…{MAX_BUDGET}"),
+                );
+            }
+        },
+    };
+    let heap_check = match p.value("--heap-check") {
+        None => None,
+        Some(s) => match HeapCheck::parse(s) {
+            Some(h) => Some(h),
+            None => return usage_error(err, &format!("--heap-check: '{s}' is not strict or off")),
+        },
+    };
+    let opts = RunOptions {
+        budget,
+        heap_check,
+        trace: p.flag("--trace"),
+    };
+    if let Some(level_path) = p.value("--level") {
+        for o in ["--in", "--in-text", "--library"] {
+            if p.flag(o) {
+                return usage_error(
+                    err,
+                    &format!(
+                        "{o} cannot be combined with --level (the level's tests define input and library)"
+                    ),
+                );
+            }
+        }
+        return crate::run_level::run_level(path, level_path, p.value("--test"), &opts, out, err);
+    }
+    if p.flag("--test") {
+        return usage_error(err, "--test needs --level");
+    }
     let mut input = Vec::new();
     if let Some(s) = p.value("--in") {
         for w in s
@@ -224,87 +310,120 @@ pub fn cmd_run(p: &Parsed, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
             match parse_int(w).and_then(|v| i32::try_from(v).ok()) {
                 Some(v) => input.push(v),
                 None => {
-                    let _ = writeln!(
+                    return usage_error(
                         err,
-                        "stapelwerk: --in: '{w}' is not a 32-bit integer (example: --in \"3 4 -5 0\")"
+                        &format!(
+                            "--in: '{w}' is not a 32-bit integer (example: --in \"3 4 -5 0\")"
+                        ),
                     );
-                    return 2;
                 }
             }
         }
     }
-    let program = match assemble_file(path, err) {
-        Ok(prog) => prog,
-        Err(code) => return code,
+    let program = match p.value("--library") {
+        None => match assemble_file(path, err) {
+            Ok(prog) => prog,
+            Err(code) => return code,
+        },
+        Some(lib_path) => {
+            let (Some(src), Some(lib)) = (read_text(path, err), read_text(lib_path, err)) else {
+                return 1;
+            };
+            match assemble(&src, Some(&lib), &MnemonicFilter::All) {
+                Ok(prog) => prog,
+                Err(diags) => {
+                    let lib_name = LibraryName {
+                        name: lib_path,
+                        first_line: 1,
+                    };
+                    print_diags(path, Some(&lib_name), &diags, err);
+                    return 1;
+                }
+            }
+        }
     };
-    let mut m = Machine::new(&program, MachineConfig::default());
+    let defaults = MachineConfig::default();
+    let config = MachineConfig {
+        budget: opts.budget.unwrap_or(defaults.budget),
+        heap_check: opts.heap_check.unwrap_or(defaults.heap_check),
+        ..defaults
+    };
+    let mut m = Machine::new(&program, config);
     m.tapes.in_ints = input;
     m.tapes.in_text = p.value("--in-text").unwrap_or("").as_bytes().to_vec();
     let mut lines = LineCounter::new(&program);
-    let status = if p.flag("--trace") {
-        trace(&mut m, &program, &mut lines, out)
+    let status = if opts.trace {
+        trace(&mut m, &program, None, &mut lines, out)
     } else {
         run_to_end(&mut m, None, &mut lines)
     };
     let _ = out.write_all(&format_output(&m));
+    report_status(&m, &program, status, &lines, err);
+    if status == Status::Halted { 0 } else { 1 }
+}
+
+/// Prints the final status line on `err`: halted, fault with source line, budget with the
+/// hottest line, or another status.
+pub(crate) fn report_status(
+    m: &Machine,
+    program: &Program,
+    status: Status,
+    lines: &LineCounter,
+    err: &mut dyn Write,
+) {
     let s = &m.state;
-    let line_of = |pc: u32| {
-        program
-            .line_of(pc)
-            .filter(|e| e.file == FILE_PLAYER)
-            .map_or(String::new(), |e| format!(" (line {})", e.line))
-    };
-    match status {
-        Status::Halted => {
-            let _ = writeln!(
+    let _ = match status {
+        Status::Halted => writeln!(
+            err,
+            "-- halted after {} steps, {} cycles",
+            s.steps, s.cycles
+        ),
+        Status::Fault => match &s.fault {
+            Some(f) => writeln!(
                 err,
-                "-- halted after {} steps, {} cycles",
-                s.steps, s.cycles
-            );
-            0
-        }
-        Status::Fault => {
-            if let Some(f) = &s.fault {
-                let _ = writeln!(
-                    err,
-                    "-- fault at 0x{:04X}{} after {} steps: {}",
-                    f.pc,
-                    line_of(f.pc),
-                    f.step,
-                    messages::fault(f)
-                );
-            }
-            1
-        }
+                "-- fault at 0x{:04X}{} after {} steps: {}",
+                f.pc,
+                line_note(program, f.pc),
+                f.step,
+                messages::fault(f)
+            ),
+            None => writeln!(err, "-- fault"),
+        },
         Status::BudgetExceeded => {
             let hottest = lines.hottest_line();
             let args = vec![
                 ("cycles", s.cycles.into()),
                 ("hottest_line", hottest.into()),
             ];
-            let _ = writeln!(
+            writeln!(
                 err,
-                "-- {}",
-                messages::describe("run.budget_exceeded", &args)
-            );
-            1
+                "-- {}; line {hottest} ran {} times",
+                messages::describe("run.budget_exceeded", &args),
+                lines.count_of(hottest)
+            )
         }
-        other => {
-            let _ = writeln!(err, "-- stopped with status {}", other.name());
-            1
-        }
-    }
+        other => writeln!(err, "-- stopped with status {}", other.name()),
+    };
 }
 
 /// Single-steps the machine and prints one line per executed instruction: step number, pc,
-/// instruction and the registers, flags and output it changed.
-fn trace(
+/// instruction and the registers, flags and output it changed. With `trap = Some(addr)`
+/// (function test) the run ends with HALTED when `pc` reaches `addr`, before the trap word
+/// executes, exactly like [`run_to_end`].
+pub(crate) fn trace(
     m: &mut Machine,
     program: &Program,
+    trap: Option<u32>,
     lines: &mut LineCounter,
     out: &mut dyn Write,
 ) -> Status {
+    let mut first = true;
     loop {
+        if !first && trap == Some(m.state.pc) && m.state.status == Status::Paused {
+            m.state.status = Status::Halted;
+            return Status::Halted;
+        }
+        first = false;
         let before = m.state.clone();
         let word = before.mem.peek_u32(before.pc);
         let text = instr_text(word, before.pc, Some(program));
@@ -345,6 +464,10 @@ fn trace(
                 changes.join(" ")
             );
             let _ = writeln!(out, "{}", line.trim_end());
+        }
+        if status == Status::BudgetExceeded && trap == Some(m.state.pc) {
+            m.state.status = Status::Halted;
+            return Status::Halted;
         }
         if status != Status::Paused {
             return status;

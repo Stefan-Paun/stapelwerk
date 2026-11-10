@@ -167,6 +167,30 @@ fn memory_and_register_tests() {
     let load =
         "  li r1, WERT\n  ld r0, [r1]\n  sys WRITE_INT\n  mov r0, r3\n  sys WRITE_INT\n  halt\n";
     assert!(one("set WERT = 77\nreg r3 = -9\nout = 77 -9", load).passed);
+    // Addresses with built-in constants and `SYMBOL ± n`.
+    let store2 = "  li r1, WERT\n  mov r2, 7\n  st r2, [r1 + 4]\n  li r1, INPUT\n  ld r0, [r1 + 8]\n  sys WRITE_INT\n  halt\n";
+    let l = parse(
+        "[level]\nid = r\n\n[library]\n.data\nWERT:   .word 0, 0, 0\n\n\
+         [test]\nname = t\nset INPUT + 8 = 31\nout = 31\nexpect WERT + 4 = 7\nexpectb WERT+4 = 7 0\nexpect WERT + 8 = 0\n",
+    )
+    .unwrap();
+    assert!(report(&l, store2).passed, "{:?}", report(&l, store2));
+    let l = parse(
+        "[level]\nid = r\n\n[library]\n.data\nWERT:   .word 0, 0, 0\n\n\
+         [test]\nname = t\nexpect WERT + 4 = 8\n",
+    )
+    .unwrap();
+    assert_eq!(
+        report(&l, store2).tests[0]
+            .mismatch
+            .as_ref()
+            .map(|m| m.args.clone()),
+        Some(vec![
+            ("addr", int(0x4004)),
+            ("expected", int(8)),
+            ("actual", int(7))
+        ])
+    );
     // Output is checked before memory.
     let r = one("out = 1\nexpect WERT = 1", store);
     assert_eq!(mismatch(&r).0, "check.out_missing");
@@ -244,16 +268,38 @@ fn heap_tests() {
 
 #[test]
 fn budget_and_faults() {
-    let r = one("budget = 100", "schleife:\n  jmp schleife\n");
+    let r = one(
+        "budget = 100",
+        "  mov r1, 0\nschleife:\n  add r1, 1\n  jmp schleife\n",
+    );
     assert_eq!(r.status, Status::BudgetExceeded);
     assert!(r.cycles >= 100);
-    assert_eq!(
-        mismatch(&r),
-        (
-            "check.not_halted",
-            vec![("status", "BUDGET_EXCEEDED".into())]
-        )
+    // The budget end names cycles, the most executed line of file 0 and its count.
+    let (key, args) = mismatch(&r);
+    assert_eq!(key, "check.not_halted");
+    assert_eq!(args[0], ("status", "BUDGET_EXCEEDED".into()));
+    assert_eq!(args[1], ("cycles", int(r.cycles as i64)));
+    assert_eq!(args[2], ("hottest_line", int(3)));
+    let Arg::Int(count) = args[3].1.clone() else {
+        panic!("{args:?}")
+    };
+    assert_eq!(args[3].0, "hottest_count");
+    assert!(count >= 30, "{count}");
+    // JSON: status 5 and the extra arguments.
+    let l = level("[test]\nname = t\nbudget = 100\n");
+    let rep = report(&l, "  mov r1, 0\nschleife:\n  add r1, 1\n  jmp schleife\n");
+    let j = rep.to_json(&l);
+    assert!(
+        j.contains(&format!(
+            r#""passed":false,"status":5,"cycles":{},"steps":{},"fault":null,"mismatch":{{"key":"check.not_halted","args":{{"status":"BUDGET_EXCEEDED","cycles":{},"hottest_line":3,"hottest_count":{count}}}}}"#,
+            r.cycles, r.steps, r.cycles
+        )),
+        "{j}"
     );
+    // Other non-halted endings keep the plain form.
+    let r = one("", "  sys READ_INT\n  halt\n");
+    assert_eq!(r.status, Status::Fault);
+    assert_eq!(r.mismatch, None);
     // The level budget applies without an override.
     let r = one("", "schleife:\n  jmp schleife\n");
     assert!(r.cycles >= 2000 && r.cycles < 2100);

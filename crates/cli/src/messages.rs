@@ -238,6 +238,17 @@ pub fn describe(key: &str, args: &[(&'static str, Arg)]) -> String {
     {
         text.push_str(&format!(" (did you mean '{s}'?)"));
     }
+    if key == "check.not_halted"
+        && let (Some(Arg::Int(cycles)), Some(Arg::Int(line)), Some(Arg::Int(count))) = (
+            arg(args, "cycles"),
+            arg(args, "hottest_line"),
+            arg(args, "hottest_count"),
+        )
+    {
+        text.push_str(&format!(
+            ": cycle budget used up after {cycles} cycles, line {line} ran {count} times"
+        ));
+    }
     if key == "asm.imm_range" && matches!(arg(args, "hint"), Some(Arg::Str(h)) if h == "li") {
         text.push_str(" (use 'li' for large constants)");
     }
@@ -306,6 +317,19 @@ mod tests {
         assert_eq!(
             s,
             "unknown mnemonic 'ad' (did you mean 'add'?) [asm.unknown_mnemonic]"
+        );
+        let s = describe(
+            "check.not_halted",
+            &[
+                ("status", "BUDGET_EXCEEDED".into()),
+                ("cycles", Arg::Int(10000)),
+                ("hottest_line", Arg::Int(9)),
+                ("hottest_count", Arg::Int(3334)),
+            ],
+        );
+        assert_eq!(
+            s,
+            "the run ended with status BUDGET_EXCEEDED: cycle budget used up after 10000 cycles, line 9 ran 3334 times [check.not_halted]"
         );
         let s = describe("check.mem_mismatch", &[("addr", Arg::Int(0x4000))]);
         assert!(s.starts_with("memory at 0x4000: expected ?"));

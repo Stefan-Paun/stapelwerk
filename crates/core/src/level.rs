@@ -8,11 +8,14 @@ pub mod pack;
 
 use crate::asm::MnemonicFilter;
 use crate::asm::lexer::{TokenKind, parse_number, tokenize_line, utf16_col};
-use crate::consts::{DEFAULT_BUDGET, MAX_BUDGET, MEM_SIZE, SCREEN_BYTES, SCREEN_H, SCREEN_W};
+use crate::consts::{
+    BUILTIN_CONSTANTS, DEFAULT_BUDGET, MAX_BUDGET, MEM_SIZE, SCREEN_BYTES, SCREEN_H, SCREEN_W,
+};
 use crate::diag::{Diagnostic, FILE_LEVEL};
 use crate::heap::HeapCheck;
 use crate::isa::{Reg, is_mnemonic};
 use crate::json::JsonWriter;
+use crate::program::Program;
 use crate::session::TestSetup;
 
 /// `kind` in `[level]`.
@@ -49,11 +52,62 @@ impl LevelKind {
     }
 }
 
-/// Address in a test line: a number or a symbol of the assembled program.
+/// Address in a test line (`set`, `setb`, `expect`, `expectb`): a number, a symbol of the
+/// assembled program (label or `.equ` constant, also from the library), or `SYMBOL + n` /
+/// `SYMBOL - n`. Built-in constants (`INPUT`, `SCREEN`, `HEAP`, `STACK_TOP`, `SCREEN_W`,
+/// `SCREEN_H`) are known without a program, so the parser turns them (with their offset) into
+/// [`AddrRef::Num`] right away.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AddrRef {
     Num(u32),
     Symbol(String),
+    /// `SYMBOL + offset` (negative offset: `SYMBOL - n`); the offset is never 0.
+    Offset(String, i64),
+}
+
+impl AddrRef {
+    /// Resolves the address against `program`: symbols of the program or library first, then the
+    /// built-in constants. `None` if the symbol is unknown or the result lies outside
+    /// 0…0xFFFF.
+    pub fn resolve(&self, program: &Program) -> Option<u32> {
+        self.resolve_with(|name| program.symbol(name).map(|s| s.value))
+    }
+
+    /// Resolves the address with only the built-in constants (no program); `None` for other
+    /// symbols.
+    pub fn resolve_builtin(&self) -> Option<u32> {
+        self.resolve_with(|_| None)
+    }
+
+    fn resolve_with(&self, lookup: impl Fn(&str) -> Option<i64>) -> Option<u32> {
+        let (name, offset) = match self {
+            AddrRef::Num(n) => return (*n < MEM_SIZE).then_some(*n),
+            AddrRef::Symbol(s) => (s.as_str(), 0),
+            AddrRef::Offset(s, o) => (s.as_str(), *o),
+        };
+        let base = lookup(name).or_else(|| builtin_address(name))?;
+        base.checked_add(offset)
+            .filter(|v| (0..MEM_SIZE as i64).contains(v))
+            .map(|v| v as u32)
+    }
+
+    /// The address as written in a level file: `16384`, `DATA`, `DATA + 4`, `DATA - 4`.
+    pub fn text(&self) -> String {
+        match self {
+            AddrRef::Num(n) => n.to_string(),
+            AddrRef::Symbol(s) => s.clone(),
+            AddrRef::Offset(s, o) if *o < 0 => format!("{s} - {}", o.unsigned_abs()),
+            AddrRef::Offset(s, o) => format!("{s} + {o}"),
+        }
+    }
+}
+
+/// Value of a built-in constant usable as a test address (not the colour names).
+fn builtin_address(name: &str) -> Option<i64> {
+    BUILTIN_CONSTANTS
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, v)| *v)
 }
 
 /// `set ADR = …` (words) or `setb ADR = …` (bytes or a string), and the `expect`/`expectb`
@@ -340,7 +394,8 @@ impl TestCase {
     /// Writes the detail fields of a visible test in `level_info` (ABI v1 extension): `in`,
     /// `in_text`, `out`, `out_text`, `regs`, `set`, `call`, `expect_reg`, `expect`, `screen_init`,
     /// `expect_screen`, `heap_empty`. Register and word values are signed (`i32`), bytes 0…255;
-    /// addresses are numbers, or the symbol name when the line names a symbol.
+    /// addresses are numbers (also for built-in constants such as `INPUT + 4`, which need no
+    /// program), otherwise the address as text (`DATA`, `DATA + 4`).
     pub fn write_details_json(&self, w: &mut JsonWriter) {
         w.key("in");
         w.begin_array();
@@ -410,7 +465,7 @@ fn write_mem_specs(w: &mut JsonWriter, key: &str, specs: &[MemSpec]) {
         w.begin_object();
         match &spec.addr {
             AddrRef::Num(a) => w.field_uint("addr", *a as u64),
-            AddrRef::Symbol(s) => w.field_str("addr", s),
+            other => w.field_str("addr", &other.text()),
         }
         match &spec.values {
             MemValues::Words(words) => {
@@ -571,7 +626,7 @@ struct Kv<'a> {
 
 /// Why a line in a key-value section is malformed.
 enum KvError<'a> {
-    /// No `=`, or more than two words left of it; carries the first word.
+    /// No `=`; carries the first word.
     Shape(&'a str, u32),
 }
 
@@ -602,9 +657,12 @@ fn split_kv(line: &str) -> Result<Option<Kv<'_>>, KvError<'_>> {
     let Some(eq) = eq else {
         return Err(KvError::Shape(key, key_col));
     };
-    if words.len() > 2 {
-        return Err(KvError::Shape(key, key_col));
-    }
+    // Everything between the key and `=` is the argument (it may contain spaces, e.g.
+    // `set INPUT + 4 = 1`).
+    let arg = words
+        .get(1)
+        .and_then(|&(off, _)| left.get(off..))
+        .map(str::trim_end);
     let right = body.get(eq + 1..).unwrap_or("");
     let value = right.trim();
     let lead = right.len() - right.trim_start().len();
@@ -612,7 +670,7 @@ fn split_kv(line: &str) -> Result<Option<Kv<'_>>, KvError<'_>> {
     Ok(Some(Kv {
         key,
         key_col,
-        arg: words.get(1).map(|&(_, a)| a),
+        arg,
         value,
         val_col: utf16_col(line, val_off),
         val_len: utf16_len(value),
@@ -655,16 +713,43 @@ pub fn parse_string(s: &str) -> Option<Vec<u8>> {
     }
 }
 
-/// Address argument: a number 0…0xFFFF or a symbol name.
+/// Address argument: a number 0…0xFFFF, a symbol name, or `SYMBOL + n` / `SYMBOL - n` (spaces
+/// optional, `n` a number 0…0xFFFF). Built-in constants become numbers right away; their result
+/// must lie in 0…0xFFFF.
 fn parse_addr(s: &str) -> Option<AddrRef> {
+    let s = s.trim();
     let first = s.bytes().next()?;
     if first.is_ascii_digit() {
         return parse_in_range(s, 0, MEM_SIZE as i64 - 1).map(|v| AddrRef::Num(v as u32));
     }
-    let ok = (first.is_ascii_alphabetic() || first == b'_' || first == b'.')
-        && s.bytes()
+    let (name, offset) = match s.find(['+', '-']) {
+        Some(i) => {
+            let name = s.get(..i)?.trim_end();
+            let rest = s.get(i + 1..)?.trim();
+            let n = parse_number(rest).filter(|n| (0..MEM_SIZE as i64).contains(n))?;
+            (name, if s.as_bytes()[i] == b'-' { -n } else { n })
+        }
+        None => (s, 0),
+    };
+    let ok = name
+        .bytes()
+        .next()
+        .is_some_and(|b| b.is_ascii_alphabetic() || b == b'_' || b == b'.')
+        && name
+            .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'.');
-    ok.then(|| AddrRef::Symbol(s.to_string()))
+    if !ok {
+        return None;
+    }
+    let addr = if offset == 0 {
+        AddrRef::Symbol(name.to_string())
+    } else {
+        AddrRef::Offset(name.to_string(), offset)
+    };
+    if builtin_address(name).is_some() {
+        return addr.resolve_builtin().map(AddrRef::Num);
+    }
+    Some(addr)
 }
 
 /// Label name for `call`.
@@ -1295,7 +1380,8 @@ mod tests {
         assert_eq!((kv.key, kv.arg, kv.value), ("reg", Some("r1"), "-5"));
         assert!(split_kv("; only a comment").ok().unwrap().is_none());
         assert!(split_kv("hidden").is_err());
-        assert!(split_kv("a b c = 1").is_err());
+        let kv = split_kv("set  DATA + 4  = 1").ok().flatten().unwrap();
+        assert_eq!((kv.key, kv.arg), ("set", Some("DATA + 4")));
     }
 
     #[test]
@@ -1306,6 +1392,30 @@ mod tests {
         assert_eq!(parse_addr("0x4000"), Some(AddrRef::Num(0x4000)));
         assert_eq!(parse_addr("0x10000"), None);
         assert_eq!(parse_addr("MAX"), Some(AddrRef::Symbol("MAX".into())));
+        assert_eq!(parse_addr("INPUT"), Some(AddrRef::Num(0x6000)));
+        assert_eq!(parse_addr("INPUT + 4"), Some(AddrRef::Num(0x6004)));
+        assert_eq!(parse_addr("STACK_TOP-0x10"), Some(AddrRef::Num(0xEFF0)));
+        assert_eq!(parse_addr("STACK_TOP + 0x1000"), None);
+        assert_eq!(parse_addr("HEAP - 0x8001"), None);
+        assert_eq!(
+            parse_addr("tabelle + 8"),
+            Some(AddrRef::Offset("tabelle".into(), 8))
+        );
+        assert_eq!(
+            parse_addr("tabelle-0x4"),
+            Some(AddrRef::Offset("tabelle".into(), -4))
+        );
+        assert_eq!(
+            parse_addr("tabelle + 0"),
+            Some(AddrRef::Symbol("tabelle".into()))
+        );
+        assert_eq!(parse_addr("tabelle + x"), None);
+        assert_eq!(parse_addr("tabelle + -4"), None);
+        assert_eq!(parse_addr("tabelle * 4"), None);
+        assert_eq!(parse_addr("+ 4"), None);
+        assert_eq!(parse_addr("RED"), Some(AddrRef::Symbol("RED".into())));
+        assert_eq!(AddrRef::Offset("t".into(), -4).text(), "t - 4");
+        assert_eq!(AddrRef::Offset("t".into(), 4).text(), "t + 4");
         assert_eq!(parse_words("-1 2"), Some(vec![u32::MAX, 2]));
         assert_eq!(parse_bytes("300"), None);
         assert_eq!(trim_blank_lines("\n\n  a\nb\n\n"), "  a\nb");

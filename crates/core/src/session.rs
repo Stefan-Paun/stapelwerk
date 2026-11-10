@@ -896,13 +896,9 @@ fn apply_set(
 ) -> Result<(), SessionError> {
     let addr = match &spec.addr {
         AddrRef::Num(a) => *a,
-        AddrRef::Symbol(name) => {
-            let v = program
-                .symbol(name)
-                .ok_or_else(|| SessionError::UnknownSymbol(name.clone()))?
-                .value;
-            u32::try_from(v).map_err(|_| SessionError::UnknownSymbol(name.clone()))?
-        }
+        other => other
+            .resolve(program)
+            .ok_or_else(|| SessionError::UnknownSymbol(other.text()))?,
     };
     let bytes: Vec<u8> = match &spec.values {
         MemValues::Words(w) => w.iter().flat_map(|x| x.to_le_bytes()).collect(),

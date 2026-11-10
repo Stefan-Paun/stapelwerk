@@ -76,7 +76,13 @@ may appear only once appearing twice → `lvl.duplicate_section`.
 | `seed` | overrides the level seed |
 | `budget` | overrides the level budget |
 
-`ADR` is a number or a symbol of the assembled program (e.g. a label from the library).
+`ADR` is a number, a symbol of the assembled program (a label or `.equ` constant, also from the
+library), a built-in constant (`INPUT`, `SCREEN`, `HEAP`, `STACK_TOP`, `SCREEN_W`, `SCREEN_H`; not
+the colour names), or a simple expression `SYMBOL + n` / `SYMBOL - n` (`n` a number 0…0xFFFF, spaces
+optional), e.g. `set INPUT + 8 = 5` or `expectb tabelle - 1 = 0`. The result must lie in
+0…0xFFFF. Built-in constants are resolved while parsing (a result out of range is
+`lvl.bad_value`), so `level_info` shows them as numbers; addresses with program symbols are
+resolved against the assembled program and appear in `level_info` as text (`"tabelle + 8"`).
 `expect_screen = reference` means the screen after the run must equal the screen of the reference
 solution after the same test. A test without `out` does not check the output; `out =` with an empty
 value requires the output to be empty. A test passes when the program halts (`HALTED`) and every
@@ -120,7 +126,8 @@ One file name per line in playing order. Chapter lines look like
 
 Details of the comparison (in this order; the first failing check is the `mismatch`): a fault is
 reported as `fault` (no mismatch); any other status than `HALTED` is `check.not_halted` (also for
-`BUDGET_EXCEEDED`); function tests then check `r4`–`r7`, `fp`, `sp`; then `out`, `out_text`,
+`BUDGET_EXCEEDED`, which additionally carries `cycles`, `hottest_line` and `hottest_count`,
+see [ABI.md](ABI.md#json-shapes)); function tests then check `r4`–`r7`, `fp`, `sp`; then `out`, `out_text`,
 `expect`/`expectb` (in file order), `expect_reg`, `expect_screen`, `expect_heap_empty`. `out`
 compares only the **number** entries of the output tape and `out_text` only the **byte** entries,
 each in order, so a program may separate numbers with characters. Word values in mismatches are
@@ -160,7 +167,8 @@ in manifest order. Packing refuses levels whose reference does not pass every te
 Additional `--strict` rules: the file is named `<id>.lvl`, ids and (chapter, order) pairs are
 unique, every `.lvl` in the folder is listed in the manifest under its chapter line, the start code
 assembles, `ref_cycles`/`ref_size` do not appear in source files, `set`/`expect` symbols and `call`
-labels exist in the reference program, and `set` ranges lie inside one of the segments data, input,
+labels exist in the reference program (every `set`/`expect` address, including `SYMBOL ± n`,
+must resolve to 0…0xFFFF), and `set` ranges lie inside one of the segments data, input,
 stack or screen (not the heap). Without `--strict` only parsing and the reference are checked.
 `--mutate` deletes one source line of the reference at a time (a label on that line stays); lines
 whose instructions are all `nop` are not mutated, and `mutate:skip` may appear anywhere in the
@@ -175,7 +183,8 @@ line's comment.
 |---|---|
 | `asm <file.s> [-o out.img]` | assemble a source file; print diagnostics or write the memory image |
 | `dis <file.img\|file.s>` | disassemble an image or an assembled source file |
-| `run <file.s> [--in "3 4"] [--in-text "…"] [--trace]` | assemble and run; print output, final status and optionally a trace |
+| `run <file.s> [--in "3 4"] [--in-text "…"] [--library lib.s] [--budget N] [--heap-check strict\|off] [--trace]` | assemble and run; print output, final status and optionally a trace |
+| `run <file.s> --level <file.lvl> [--test NAME\|INDEX] [--budget N] [--heap-check strict\|off] [--trace]` | run a program against a level's tests exactly like the game |
 | `check-levels [--strict] [--mutate] <dir\|file>` | check level files (see above) |
 | `pack-levels <dir> <target-dir>` | pack levels for the web build |
 | `isa-table` | print the generated instruction table; CI compares it with [isa-table.md](isa-table.md) |
@@ -185,7 +194,32 @@ line's comment.
 (u32 little-endian each), the text words from 0x0100, then the data bytes from 0x4000. `run`
 prints the output on stdout (numbers in decimal, a newline between two consecutive numbers, bytes
 as they are) and the final status on stderr; it runs in test mode (input closed) with the default
-budget. `--trace` prints one line per executed instruction: step, `pc`, instruction, and the
+budget, unless `--budget N` (1…10000000) or `--heap-check strict|off` say otherwise; `--library
+lib.s` assembles `lib.s` as file 1 after the program, like a level's `[library]` (its diagnostics
+name `lib.s`). On a budget end `run` names the most executed line and how often it ran.
+
+`run <file.s> --level <file.lvl>` assembles the file as the player's program against the level's
+`[library]` and `allow`/`forbid` filter and runs the level's tests with its budget, seed and
+`heap_check`, set up exactly like the test runner (input, `in_text`, `reg`, `set`/`setb`,
+`screen_init`, `call`; for `expect_screen = reference` the reference solution runs first).
+`--budget` and `--heap-check` override the level (every test's budget) for experiments; `--in`,
+`--in-text` and `--library` cannot be combined with `--level` (exit code 2).
+
+- `--test NAME|INDEX` (name first, then 0-based index; unknown → exit code 2 with the list of
+  tests) runs one test: the program's output on stdout; on stderr the test, the final status
+  (halted with steps and cycles; a fault with address, source line `(line N)` or
+  `(library line N)` and the `fault.*` message; a budget end with the most executed line and how
+  often it ran), the `check.*` result if any (`-- check: …`), and `-- PASSED` or `-- FAILED`.
+  Exit code 0 if the test passes, else 1.
+- Without `--test` every test runs (hidden ones included and marked) and stdout shows a summary
+  in the spirit of `run_tests`: a header with id, test count, budget and heap check, one line per
+  test (`ok    #0 name   31 cycles, 12 steps` or `FAIL  #1 name   <fault or check message>`), then
+  `passed/total`, `cycles_avg`, `cycles_max`, `steps_avg`, `size` and the reference values.
+  Exit code 0 only if every test passes.
+- `--trace` works in both forms (one block `== test #i 'name'` per test without `--test`); a
+  function test's trace ends when `pc` reaches `__trap`, like the runner.
+
+`--trace` prints one line per executed instruction: step, `pc`, instruction, and the
 registers, flags and output it changed. `fuzz-gen` writes `fuzz-NNNNN.s` and `digests.txt`, one line
 per program: `file rand_seed budget status steps step:digest …` with the state digest every 1000
 steps and at the end (test mode, empty input).

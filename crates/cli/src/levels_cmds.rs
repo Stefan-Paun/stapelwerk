@@ -23,7 +23,7 @@ const MUTATE_SKIP: &str = "mutate:skip";
 
 /// First content line (1-based) of section `name` in `src`, if the section exists. Matches the
 /// parser, which drops leading blank lines of text sections.
-fn section_first_line(src: &str, name: &str) -> Option<u32> {
+pub(crate) fn section_first_line(src: &str, name: &str) -> Option<u32> {
     let header = format!("[{name}]");
     let mut lines = src.lines().enumerate();
     lines.find(|(_, l)| l.trim() == header)?;
@@ -272,8 +272,9 @@ fn address_problems(level: &Level, program: &Program) -> Vec<String> {
         {
             let Some(addr) = resolve_addr(program, &spec.addr) else {
                 out.push(format!(
-                    "test '{}': {what} address {:?} is not a symbol of the reference program",
-                    t.name, spec.addr
+                    "test '{}': {what} address '{}' does not resolve to 0x0000…0xFFFF with the reference program (unknown symbol or out of range)",
+                    t.name,
+                    spec.addr.text()
                 ));
                 continue;
             };

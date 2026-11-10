@@ -207,7 +207,23 @@ argument names of [ERRORS.md](ERRORS.md).
  "reference":{"cycles":31,"size":9}}   // reference may be null
 ```
 
-`mismatch` is `{"key":"check.…","args":{…}}` or `null`. The optional `input` object (`in`,
+`mismatch` is `{"key":"check.…","args":{…}}` or `null`.
+
+**Budget end** (*extension of v1*, additive, `abi_version()` stays 1). A test that ran out of
+cycles has `"status":5` (BUDGET_EXCEEDED), `"fault":null`, `cycles` ≥ the test's budget, and a
+`check.not_halted` mismatch with three extra arguments, so the UI can say "cycle budget used up –
+line 7 ran 9 999 times" without another call:
+
+```jsonc
+{"index":1,"name":"ungerade","hidden":false,"passed":false,"status":5,"cycles":10000,"steps":4999,"fault":null,
+ "mismatch":{"key":"check.not_halted","args":{"status":"BUDGET_EXCEEDED","cycles":10000,"hottest_line":8,"hottest_count":1666}}}
+```
+
+`cycles` repeats the test's cycle count, `hottest_line` is the most executed line of the player's
+file (file 0; 0 if no player line ran, e.g. a loop in the library; smallest line on ties) and
+`hottest_count` how often it ran (the same numbers as `sess_line_counts` after running that test to
+its end). Other non-`HALTED` endings keep `{"status":"…"}` only. `sess_check` returns the same
+entry. The optional `input` object (`in`,
 `in_text`, `out`, `out_text`; the last two `null` when the test does not check them) is always
 present for visible tests; for hidden tests it is present only when the test failed, so the player
 can reproduce the failure.
@@ -227,7 +243,7 @@ goes in and what is expected, so the UI can show it before anything runs:
 | `in_text` | `in_text` as a string (`""` if none) |
 | `out` / `out_text` | expected number output / text output; `null` = not checked |
 | `regs` / `expect_reg` | `[{"reg":"r1","value":-2}]` (`reg rX = v` / `expect_reg rX = v`; values signed) |
-| `set` / `expect` | `[{"addr":16384,"words":[1,-1]}]` for `set`/`expect`, `[{"addr":"DATA","bytes":[97,98]}]` for `setb`/`expectb`; `addr` is a number, or the symbol name when the line names a symbol (the level alone cannot resolve symbols); words signed, bytes 0…255 |
+| `set` / `expect` | `[{"addr":16384,"words":[1,-1]}]` for `set`/`expect`, `[{"addr":"DATA","bytes":[97,98]}]` for `setb`/`expectb`; `addr` is a number (also for built-in constants with an optional offset, e.g. `INPUT + 4` → `24580`, which need no program), otherwise the address as text when it names a program symbol: `"DATA"`, `"DATA + 4"`, `"DATA - 4"` (the level alone cannot resolve program symbols); words signed, bytes 0…255 |
 | `call` | label of a function test or `null` |
 | `screen_init` | image name or `null` |
 | `expect_screen` | `"reference"`, an image name or `null`; packed levels name the image `__ref_TESTNAME` |

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { STATUS_ERROR, VmError, loadVm } from '../../web/js/vm.js';
-import { PACKED_LEVEL_FILE, levelText, referenceSource, wasmPath } from './helpers.mjs';
+import path from 'node:path';
+import { PACKED_LEVEL_FILE, ROOT, levelText, lvlSection, referenceSource, wasmPath } from './helpers.mjs';
 
 const S = { PAUSED: 0, HALTED: 1, FAULT: 2, BREAKPOINT: 3, WAITING: 4, BUDGET: 5, NOT_ASSEMBLED: 6 };
 const bytes = readFileSync(wasmPath());
@@ -404,6 +405,41 @@ test('level_info test details (ABI v1 extension)', () => {
       ['ref', null, 'reference'], ['named', 'start', 'ziel'], ['packed', null, '__ref_ref'], ['none', null, null],
     ]);
     assert.equal(lv.info().hidden_tests, 1);
+  });
+});
+
+test('budget end: status 5 with cycles and hottest line (ABI v1 extension)', () => {
+  const text = readFileSync(path.join(ROOT, 'levels', '2-4-endlosschleife.lvl'), 'utf8');
+  withLevel(text, (lv) => withSession(lv, (s) => {
+    assert.equal(s.assemble(lvlSection(text, 'start')).ok, true);
+    const report = s.runTests();
+    const t = report.tests.find((r) => r.name === 'ungerade');
+    assert.equal(t.passed, false);
+    assert.equal(t.status, S.BUDGET);
+    assert.equal(t.fault, null);
+    assert.equal(t.cycles, 10000);
+    assert.equal(t.mismatch.key, 'check.not_halted');
+    const { status, cycles, hottest_line: line, hottest_count: count } = t.mismatch.args;
+    assert.deepEqual([status, cycles, line], ['BUDGET_EXCEEDED', 10000, 8]);
+    assert.ok(count > 1000, `line ${line} ran ${count} times`);
+    // sess_check reports the same entry; the line counters agree.
+    assert.equal(s.reset(t.index), S.PAUSED);
+    const checked = s.check();
+    assert.deepEqual(checked.mismatch, t.mismatch);
+    assert.equal(s.run(1e9), S.BUDGET);
+    const counts = new Map(s.lineCounts());
+    assert.equal(counts.get(8), count);
+    // A passing test keeps the plain form.
+    assert.equal(report.tests.find((r) => r.name === 'gerade').mismatch, null);
+  }));
+});
+
+test('level_info: built-in constants in addresses are resolved', () => {
+  const text = '[level]\nid = a\n\n[test]\nname = t\nset INPUT + 4 = 1\nexpectb STACK_TOP - 1 = 2\nexpect werte + 8 = 3\n';
+  withLevel(text, (lv) => {
+    const [t] = lv.info().tests;
+    assert.deepEqual(t.set, [{ addr: 0x6004, words: [1] }]);
+    assert.deepEqual(t.expect, [{ addr: 0xEFFF, bytes: [2] }, { addr: 'werte + 8', words: [3] }]);
   });
 });
 

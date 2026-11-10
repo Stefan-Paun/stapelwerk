@@ -531,7 +531,32 @@ table:  .word 0, 0
         }],
         ..setup
     };
-    assert_eq!(s.reset(Some(bad)), Err(SessionError::BadAddress(0xFFFF)));
+    assert_eq!(
+        s.reset(Some(bad.clone())),
+        Err(SessionError::BadAddress(0xFFFF))
+    );
+
+    // `SYMBOL + n` resolves against the program; unknown or out-of-range expressions fail.
+    let offset = TestSetup {
+        sets: vec![MemSpec {
+            addr: AddrRef::Offset("table".into(), 4),
+            values: MemValues::Words(vec![9]),
+        }],
+        ..bad.clone()
+    };
+    s.reset(Some(offset)).unwrap();
+    assert_eq!(s.state().mem.peek_u32(table + 4), 9);
+    for (name, off) in [("nope", 4), ("table", -0x10000)] {
+        let wrong = TestSetup {
+            sets: vec![MemSpec {
+                addr: AddrRef::Offset(name.into(), off),
+                values: MemValues::Words(vec![9]),
+            }],
+            ..bad.clone()
+        };
+        let text = AddrRef::Offset(name.into(), off).text();
+        assert_eq!(s.reset(Some(wrong)), Err(SessionError::UnknownSymbol(text)));
+    }
 }
 
 #[test]

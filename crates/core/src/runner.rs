@@ -129,16 +129,10 @@ pub fn function_test_regs(seed: u32) -> [u32; 5] {
 /// Callee-saved registers checked after a function test, in report order.
 pub const CALLEE_CHECKED: [Reg; 6] = CALLEE_SAVED;
 
-/// Resolves a test address: a number, or a symbol (label or constant) of `program` in 0…0xFFFF.
+/// Resolves a test address: a number, a symbol (label or constant of `program`, or a built-in
+/// constant) or `SYMBOL ± n`, in 0…0xFFFF ([`AddrRef::resolve`]).
 pub fn resolve_addr(program: &Program, addr: &AddrRef) -> Option<u32> {
-    match addr {
-        AddrRef::Num(n) => Some(*n),
-        AddrRef::Symbol(s) => program
-            .symbol(s)
-            .map(|sym| sym.value)
-            .filter(|v| (0..0x1_0000).contains(v))
-            .map(|v| v as u32),
-    }
+    addr.resolve(program)
 }
 
 /// Where `expect_screen = reference` takes its screen from.
@@ -281,32 +275,60 @@ pub fn run_test_machine(
     };
     let mut p = prepare_test(level, program, test);
     let status = run_prepared(&mut p);
+    let r = finish_test(level, program, index, &p, status, screen_ref);
+    (r, Some(p.machine))
+}
+
+/// Builds the result of test `index` after its prepared machine `p` stopped with `status`
+/// ([`run_prepared`], or a single-stepping loop with the same end rule as the CLI's `--trace`).
+/// A run that ended at the budget reports `check.not_halted` with the extra arguments `cycles`,
+/// `hottest_line` (most executed line of the player's file, 0 if none) and `hottest_count`.
+pub fn finish_test(
+    level: &Level,
+    program: &Program,
+    index: u32,
+    p: &PreparedTest,
+    status: Status,
+    screen_ref: ScreenRef<'_>,
+) -> TestResult {
+    let test = level.tests.get(index as usize);
     let m = &p.machine;
     let fault = if status == Status::Fault {
         m.state.fault
     } else {
         None
     };
-    let mismatch = match status {
-        Status::Fault => None,
-        Status::Halted => evaluate(level, program, test, &p, screen_ref),
-        other => Some(Mismatch::new(
+    let mismatch = match (status, test) {
+        (Status::Fault, _) => None,
+        (Status::Halted, Some(test)) => evaluate(level, program, test, p, screen_ref),
+        (Status::BudgetExceeded, _) => {
+            let line = p.lines.hottest_line();
+            Some(Mismatch::new(
+                "check.not_halted",
+                vec![
+                    ("status", status.name().into()),
+                    ("cycles", Arg::Int(m.state.cycles as i64)),
+                    ("hottest_line", line.into()),
+                    ("hottest_count", Arg::Int(p.lines.count_of(line) as i64)),
+                ],
+            ))
+        }
+        (other, _) => Some(Mismatch::new(
             "check.not_halted",
             vec![("status", other.name().into())],
         )),
     };
-    let r = TestResult {
+    TestResult {
         index,
-        name: test.name.clone(),
-        hidden: test.hidden,
+        name: test.map(|t| t.name.clone()).unwrap_or_default(),
+        hidden: test.is_some_and(|t| t.hidden),
         passed: status == Status::Halted && mismatch.is_none(),
         status,
         cycles: m.state.cycles,
         steps: m.state.steps,
         fault,
         mismatch,
-    };
-    (r, Some(p.machine))
+    }
 }
 
 /// Checks every expectation of a halted run; returns the first failing one.

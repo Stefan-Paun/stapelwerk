@@ -259,8 +259,16 @@ fn check_levels_finds_broken_levels() {
             "        add r1, r0         ; Summe += Zahl",
             "        add r1, r0         ; mutate:skip",
         )
-        .replace("name = grundfall\n", "name = grundfall\nset 0x0200 = 1\n")
+        .replace(
+            "name = grundfall\n",
+            "name = grundfall\nset 0x0200 = 1\nset nirgends + 4 = 1\nexpect INPUT + 8 = 0\n",
+        )
     });
+    assert!(
+        out.contains("test 'grundfall': set address 'nirgends + 4' does not resolve"),
+        "{out}"
+    );
+    assert!(!out.contains("INPUT"), "{out}");
     assert!(out.contains("3 lines carry '; mutate:skip'"), "{out}");
     assert!(
         out.contains("set 0x0200..0x0203 must lie inside one of the segments"),
@@ -280,7 +288,12 @@ fn pack_levels_writes_index_and_packed_files() {
             .unwrap(),
     );
     assert_eq!(code, 0, "{err}");
-    assert!(out.contains("packed 1 level(s)"));
+    let manifest = std::fs::read_to_string(repo().join("levels/manifest.txt")).unwrap();
+    let count = manifest
+        .lines()
+        .filter(|l| l.trim().ends_with(".lvl"))
+        .count();
+    assert!(out.contains(&format!("packed {count} level(s)")), "{out}");
     let index = std::fs::read_to_string(d.0.join("index.json")).unwrap();
     assert!(index.contains(r#"{"id":"2-2-bis-zur-null","chapter":2,"order":2,"kind":"normal","title":{"de":"Bis zur Null","en":"Until Zero"}"#), "{index}");
     assert!(

@@ -8,6 +8,7 @@ mod fuzz;
 mod levels_cmds;
 mod messages;
 mod program_cmds;
+mod run_level;
 
 use args::{CommandSpec, Opt, parse};
 use std::io::Write;
@@ -40,12 +41,17 @@ const COMMANDS: &[CommandSpec] = &[
     },
     CommandSpec {
         name: "run",
-        usage: "run <file.s> [--in \"3 4\"] [--in-text \"…\"] [--trace]",
-        about: "Assemble and run a program, printing its output.",
+        usage: "run <file.s> [--in \"3 4\"] [--in-text \"…\"] [--library lib.s] [--budget N] [--heap-check strict|off] [--trace] | run <file.s> --level <file.lvl> [--test NAME|INDEX] [--budget N] [--heap-check strict|off] [--trace]",
+        about: "Assemble and run a program, printing its output; with --level run it against the level's tests.",
         options: &[
             opt("--in", true, false),
             opt("--in-text", true, false),
             opt("--trace", false, false),
+            opt("--budget", true, false),
+            opt("--heap-check", true, false),
+            opt("--library", true, false),
+            opt("--level", true, false),
+            opt("--test", true, false),
         ],
         min_positional: 1,
         max_positional: 1,
@@ -91,7 +97,11 @@ const COMMANDS: &[CommandSpec] = &[
 fn usage() -> String {
     let mut s = String::from("Usage: stapelwerk <command> [options]\n\nCommands:\n");
     for c in COMMANDS {
-        s.push_str(&format!("  {:<52} {}\n", c.usage, c.about));
+        if c.usage.chars().count() > 52 {
+            s.push_str(&format!("  {}\n  {:<52} {}\n", c.usage, "", c.about));
+        } else {
+            s.push_str(&format!("  {:<52} {}\n", c.usage, c.about));
+        }
     }
     s.push_str("\n  help | --help | -h      Show this help.\n  --version | -V          Show the version.\n");
     s

@@ -194,7 +194,10 @@ pub const ALL_KEYS: &[(&str, &[&str])] = &[
     ),
     ("check.heap_not_empty", &["count", "alloc_line"]),
     ("check.abi_clobbered", &["reg", "before", "after"]),
-    ("check.not_halted", &["status"]),
+    (
+        "check.not_halted",
+        &["status", "cycles?", "hottest_line?", "hottest_count?"],
+    ),
     // WASM ABI.
     ("abi.bad_handle", &[]),
     ("abi.bad_arg", &[]),

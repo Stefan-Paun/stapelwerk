@@ -105,7 +105,7 @@ The `mismatch` of a test result that ran without a fault but did not pass.
 - `check.screen_mismatch` {x, y, expected, actual, count} – The screen differs; first wrong pixel at (`x`, `y`), `count` wrong pixels in total (low 4 bits compared).
 - `check.heap_not_empty` {count, alloc_line} – `count` heap blocks are still allocated; `alloc_line` is the player's line of the first leaked `ALLOC` (0 if unknown).
 - `check.abi_clobbered` {reg, before, after} – A function test changed a callee-saved register (`r4`–`r7`, `fp`) or did not restore `sp`.
-- `check.not_halted` {status} – The run ended with a status other than `HALTED` (e.g. `"WAITING_INPUT"`).
+- `check.not_halted` {status, cycles?, hottest_line?, hottest_count?} – The run ended with a status other than `HALTED` (e.g. `"WAITING_INPUT"`). For `"BUDGET_EXCEEDED"` the test runner adds `cycles` (cycles used), `hottest_line` (line of the player's file executed most often, 0 if none) and `hottest_count` (how often that line ran).
 
 ## WASM ABI (`abi.*`)
 

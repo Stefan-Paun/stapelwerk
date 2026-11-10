@@ -112,6 +112,54 @@ fn info_json_test_details() {
 }
 
 #[test]
+fn addresses_with_constants_and_offsets() {
+    let src = level(
+        "",
+        "[test]\nname = a\nset INPUT = 1\nset INPUT + 8 = 2\nsetb SCREEN-1 = 3\n\
+         set tabelle + 0x10 = 4\nexpect STACK_TOP - 4 = 5\nexpectb ZIEL - 2 = 6\nexpect HEAP = 7\n",
+    );
+    let l = parse(&src).unwrap_or_else(|d| panic!("{d:?}"));
+    let t = &l.tests[0];
+    let addrs: Vec<&AddrRef> = t.sets.iter().chain(&t.expects).map(|s| &s.addr).collect();
+    assert_eq!(
+        addrs,
+        vec![
+            &AddrRef::Num(0x6000),
+            &AddrRef::Num(0x6008),
+            &AddrRef::Num(0xEFFF),
+            &AddrRef::Offset("tabelle".into(), 16),
+            &AddrRef::Num(0xEFFC),
+            &AddrRef::Offset("ZIEL".into(), -2),
+            &AddrRef::Num(0x8000),
+        ]
+    );
+    // level_info: built-in constants are resolved, program symbols stay text.
+    let j = l.info_json();
+    assert!(
+        j.contains(r#""set":[{"addr":24576,"words":[1]},{"addr":24584,"words":[2]},{"addr":61439,"bytes":[3]},{"addr":"tabelle + 16","words":[4]}]"#),
+        "{j}"
+    );
+    assert!(
+        j.contains(r#""expect":[{"addr":61436,"words":[5]},{"addr":"ZIEL - 2","bytes":[6]},{"addr":32768,"words":[7]}]"#),
+        "{j}"
+    );
+    // Out of range or malformed → lvl.bad_value on that line.
+    for bad in [
+        "set STACK_TOP + 0x1000 = 1",
+        "set INPUT - 0x6001 = 1",
+        "set tabelle + = 1",
+        "set tabelle * 2 = 1",
+        "expect 0x4000 + 4 = 1",
+        "setb tabelle + -1 = 1",
+    ] {
+        let src = level("", &format!("[test]\nname = a\n{bad}\n"));
+        let d = parse(&src).expect_err(bad);
+        assert_eq!(d.len(), 1, "{bad}: {d:?}");
+        assert_eq!(d[0].key, "lvl.bad_value", "{bad}");
+    }
+}
+
+#[test]
 fn every_test_key() {
     let src = level(
         "kind = debug\nbudget = 5000\nseed = 0x10\nallow = mov halt JE li\nheap_check = off\nmobile = yes\n",
