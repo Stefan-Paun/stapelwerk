@@ -1,7 +1,7 @@
 # Status
 
-**Phase 0 (foundation and contract): done.** Next: phase 1A (machine) and phase 1B (assembler),
-which can be built in parallel in separate files.
+**Phase 0 (foundation and contract): done.** Phase 1A (machine) and phase 1B (assembler and
+disassembler): done.
 
 ## What exists
 
@@ -10,7 +10,7 @@ which can be built in parallel in separate files.
 | Workspace | `crates/core` (`stapelwerk-core`), `crates/wasm` (`stapelwerk-wasm`, cdylib), `crates/cli` (`stapelwerk-cli`, binary `stapelwerk`); Rust 1.99.1 pinned; zero third-party crates; release profile per spec |
 | Instruction set | `crates/core/src/isa.rs` complete: `Reg`, `Cond`, `AluOp`, `Format`, `Shape`, `ImmKind`, `FlagEffect`, `OpInfo`, the opcode table `OPCODES`, `Instr`, `Mem`, `encode`, strict `decode`, `isa_table_markdown` |
 | Shared contract | `consts.rs` (memory map, segments, colours, syscalls, limits, reserved names), `fault.rs` (all `fault.*` keys, codes, args, JSON), `diag.rs` (`Diagnostic`, `Arg`, all keys), `program.rs` (`Program`, `Symbol`, `LineEntry`), `json.rs` (writer), `rng.rs` (SplitMix64, xorshift32) |
-| Placeholders | `mem.rs`, `heap.rs`, `cpu.rs`, `sys.rs`, `machine.rs` (phase 1A); `asm/`, `disasm.rs` (phase 1B); `level.rs` (data model done, parser open), `runner.rs` (result types and metrics done), `session.rs` (signatures) |
+| Placeholders | `level.rs` (data model done, parser open), `runner.rs` (result types and metrics done), `session.rs` (signatures) |
 | Tests | 8 mandatory encoding vectors, random encode/decode round trip, random words, exhaustive 2³² test (`#[ignore]`, CI release), 90 ALU vectors in `tests/vectors/alu.txt` (parsed; evaluation `#[ignore]` until phase 1A), ERRORS.md ↔ key list, CLI tests, Node ABI tests |
 | WebAssembly | exports only `abi_version()` = 1 and `memory`; no imports |
 | CLI | argument parsing for all commands; `isa-table` works; all others exit 2 with "not implemented yet" |
@@ -65,6 +65,28 @@ split of `asm/` (lexer, expr, parser, layout) is only a suggestion.
   `isa::tests::random_instr` (`pub(crate)` in `#[cfg(test)]`).
 - Golden tests go to `tests/asm/*.s` with `; expect-word:` / `; expect-error: key line:col`.
 
+### Phase 1B result
+
+- `asm::assemble` complete: lexer (UTF-16 columns), i64 expressions with overflow checks (postfix
+  form, nesting limited to 64), parser with error recovery (one diagnostic per line, all lines,
+  sorted, at most 50 + `asm.too_many_errors`), library `.equ` pre-pass, two passes, all directives,
+  local labels, `li`, short forms, condition aliases, `sys` by name or number, memory operands,
+  allow/forbid (player only), line map, symbols, size. "Did you mean" for mnemonics and directives
+  (Levenshtein ≤ 2 and smaller than the name's length).
+- Layout clarification: one zero word between the player's code and the library/trap (ISA.md,
+  "Player and library"); `.align` in `.text` pads with `nop`; library `.data` starts 4-aligned.
+- `asm.imm_range` has an optional `hint` (`"li"` for `mov rd, imm`); `asm.operand_type` may also
+  say `"string"` (`.string`, `.ascii`). Unknown symbols get no suggestion (ERRORS.md has no such
+  argument for `asm.undefined_symbol`).
+- `disasm::format_instr` (canonical form), `format_instr_labeled` (jump targets as labels),
+  `disasm_range` (fills `label` from the symbol table).
+- Tests: golden files `tests/asm/*.s` (every opcode, every `asm.*` key) with the runner
+  `crates/core/tests/asm_golden.rs`; text round trip 10⁵ random instructions plus all immediate
+  limits (`disasm.rs`) and 10⁵ random decodable words (`asm_fuzz.rs`); no panic on 12 000 corrupted
+  sources and 12 000 random byte strings; end-to-end programs on the machine (`asm_e2e.rs`);
+  layout and binding rules (`asm_layout.rs`).
+- Speed: a 502-line program assembles in about 1.5 ms natively (release, M3).
+
 ## Clarifications made in phase 0
 
 These fill gaps in the original design; they are documented in ISA.md and ABI.md.
@@ -99,9 +121,9 @@ These fill gaps in the original design; they are documented in ISA.md and ABI.md
 | 2 | ALU vectors `tests/vectors/alu.txt` incl. edge cases | 90 vectors; evaluation enabled in 1A |
 | 3 | naive i64 ALU model vs. `cpu::alu`, 10⁶ random cases (SplitMix64) | 1A |
 | 4 | exhaustive encoding over 2³² words (`#[ignore]`, release/CI) | done |
-| 5 | text round trip `asm(dis(w)) == w` for random valid instructions and immediate limits | 1B |
-| 6 | assembler golden tests `tests/asm/*.s` (`; expect-word:`, `; expect-error: key line:col`) | 1B |
-| 7 | no panic on random bytes / corrupted sources (assembler, level parser, machine) | 1A, 1B, levels |
+| 5 | text round trip `asm(dis(w)) == w` for random valid instructions and immediate limits | done (1B) |
+| 6 | assembler golden tests `tests/asm/*.s` (`; expect-word:`, `; expect-error: key line:col`) | done (1B) |
+| 7 | no panic on random bytes / corrupted sources (assembler, level parser, machine) | assembler and machine done; levels open |
 | 8 | time-travel invariant `digest(goto(k)) == d_k` in random order, thinning ≥ 3×, with input while WAITING_INPUT and `set_reg` | session phase |
 | 9 | every `fault.*` key has a triggering test (reads ERRORS.md via `include_str!`) | 1A (key list ↔ ERRORS.md already checked) |
 | 10 | differential test native vs. WASM via `fuzz-gen` | WASM ABI phase |

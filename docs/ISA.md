@@ -441,6 +441,10 @@ A fault does not consume cycles.
 - Memory offsets: `[reg ± expr]` −32768…32767, `[expr]` 0…0xFFFF.
 - Jump and call operands are address expressions (usually a label); the distance must be a multiple
   of 4 and fit in 20 signed bits of words.
+- *Clarification* of diagnostics for jump targets: a target outside the 20-bit range gives
+  `asm.imm_range` with absolute addresses as `value`, `min` and `max`; a target that is not a
+  multiple of 4 away gives `asm.operand_type {expected: "label"}`. `mov rd, imm` out of range gives
+  `asm.imm_range` with `hint: "li"`.
 - Built-in constants: `SCREEN` = 0xF000, `SCREEN_W` = 64, `SCREEN_H` = 64, `INPUT` = 0x6000,
   `HEAP` = 0x8000, `STACK_TOP` = 0xF000, the 16 colour names, and the system call names (only as
   the operand of `sys`).
@@ -451,6 +455,11 @@ A fault does not consume cycles.
   library constants) and makes them visible to the player.
 - Layout: text = player code from 0x0100, then the library, then one invisible `halt` word, the test
   trap `__trap` (used by function tests); data = player `.data` from 0x4000, then library `.data`.
+- *Clarification:* exactly one zero word (0x00000000) separates the player's code from the library
+  (or from the trap word if there is no library). A program that forgets `halt` and runs past its
+  end stops with `fault.zero_instruction` instead of falling into library code. The zero word has no
+  line-map entry and does not count towards the size. The library's `.data` starts at the next
+  multiple of 4 after the player's.
 - Labels of both files share one namespace (duplicate → `asm.duplicate_label`). Entry is always
   0x0100.
 - The level options `allow` / `forbid` filter the player's mnemonics (not the library's) →
@@ -467,5 +476,7 @@ unknown mnemonic the assembler suggests the closest known one within Levenshtein
 
 ### Line map and size
 
-- Every instruction address maps to `(file, line)`; the trap word has no entry.
+- Every instruction address maps to `(file, line)`; the zero word and the trap word have no entry.
+  *Clarification:* `.align n` in `.text` pads with `nop` words that map to the `.align` line but
+  do not count towards the size.
 - The **size** metric is the number of instruction words from file 0 (`li` counts 2).

@@ -1,16 +1,16 @@
 //! Assembler: player source + optional level library → [`Program`].
 //!
-//! PHASE 1B owns this directory. The **contract** with the rest of the crate is only
-//! [`assemble`], [`MnemonicFilter`] and the types in [`crate::program`] and [`crate::diag`]; the
-//! internal split into [`lexer`], [`expr`], [`parser`] and [`layout`] is a suggestion and may be
-//! restructured freely. Language reference: `docs/ISA.md` ("Assembly language").
+//! The **contract** with the rest of the crate is only [`assemble`], [`MnemonicFilter`] and the
+//! types in [`crate::program`] and [`crate::diag`]. Internally: [`lexer`] (tokens per line),
+//! [`expr`] (constant expressions), [`parser`] (labels, instructions, directives) and [`layout`]
+//! (pre-pass, two passes, encoding). Language reference: `docs/ISA.md` ("Assembly language").
 
 pub mod expr;
 pub mod layout;
 pub mod lexer;
 pub mod parser;
 
-use crate::diag::Diagnostic;
+use crate::diag::{Diagnostic, FILE_LIBRARY, FILE_PLAYER};
 use crate::isa::Cond;
 use crate::program::Program;
 
@@ -55,14 +55,27 @@ impl MnemonicFilter {
 /// code from 0x0100, then library code, then one `halt` word labelled `__trap`; data = player
 /// `.data` from 0x4000, then library `.data`; labels of both files share one namespace.
 ///
+/// *Clarification:* one zero word separates the player's code from the library (or from the trap
+/// word if there is no library), so a program that runs past its end without `halt` stops with
+/// `fault.zero_instruction`. That word has no line-map entry and does not count towards `size`.
+///
 /// Returns all diagnostics (sorted by file, line, column; at most 50 plus `asm.too_many_errors`)
-/// if there is at least one. PHASE 1B.
+/// if there is at least one.
 pub fn assemble(
-    _player: &str,
-    _library: Option<&str>,
-    _filter: &MnemonicFilter,
+    player: &str,
+    library: Option<&str>,
+    filter: &MnemonicFilter,
 ) -> Result<Program, Vec<Diagnostic>> {
-    Err(Vec::new())
+    let (mut p_lines, mut diags) = parser::parse_file(player, FILE_PLAYER, filter);
+    let mut l_lines = match library {
+        Some(src) => {
+            let (lines, d) = parser::parse_file(src, FILE_LIBRARY, &MnemonicFilter::All);
+            diags.extend(d);
+            lines
+        }
+        None => Vec::new(),
+    };
+    layout::assemble_lines(&mut p_lines, &mut l_lines, diags)
 }
 
 #[cfg(test)]

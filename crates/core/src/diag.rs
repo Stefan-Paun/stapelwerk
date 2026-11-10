@@ -156,7 +156,7 @@ pub const ALL_KEYS: &[(&str, &[&str])] = &[
     ("asm.unknown_register", &["name"]),
     ("asm.operand_count", &["expected", "got"]),
     ("asm.operand_type", &["expected"]),
-    ("asm.imm_range", &["value", "min", "max"]),
+    ("asm.imm_range", &["value", "min", "max", "hint?"]),
     ("asm.undefined_symbol", &["name"]),
     ("asm.duplicate_label", &["name", "first_line"]),
     ("asm.reserved_name", &["name"]),

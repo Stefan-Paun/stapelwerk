@@ -61,8 +61,8 @@ Each diagnostic has `{key, file, line, col, len, args}`: `file` 0 = player, 1 = 
 - `asm.unknown_mnemonic` {name, suggestion?} – `name` is not an instruction, pseudo-instruction or directive. `suggestion` is the closest known mnemonic within Levenshtein distance 2, if any.
 - `asm.unknown_register` {name} – A register operand is expected but `name` is not `r0`…`r7`, `fp` or `sp`.
 - `asm.operand_count` {expected, got} – Wrong number of operands; `expected` describes the accepted forms (e.g. `"2-3"`).
-- `asm.operand_type` {expected} – An operand has the wrong kind; `expected` is `"register"`, `"immediate"`, `"memory"` or `"label"`.
-- `asm.imm_range` {value, min, max} – An immediate, offset or jump distance is outside its range. For `mov` the UI suggests `li`.
+- `asm.operand_type` {expected} – An operand has the wrong kind or is missing; `expected` is `"register"`, `"immediate"`, `"memory"`, `"label"` (a jump target, also for a target that is not a multiple of 4 away, or the name of `.equ`) or `"string"` (`.string`, `.ascii`).
+- `asm.imm_range` {value, min, max, hint?} – An immediate, offset, data value, `.space`/`.align` argument or jump target is outside its range (for jumps, `value`, `min` and `max` are absolute addresses). `hint` is `"li"` for `mov rd, imm`, so the UI can suggest `li`.
 - `asm.undefined_symbol` {name} – A label or constant is used but never defined.
 - `asm.duplicate_label` {name, first_line} – A label or constant is defined twice (player and library share one namespace).
 - `asm.reserved_name` {name} – A register name, mnemonic, syscall name, built-in constant or a name starting with `__` is used as a label or constant.
