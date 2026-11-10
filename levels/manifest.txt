@@ -1,0 +1,10 @@
+# Playing order. Chapter lines: "# chapter N: German title | English title".
+# chapter 0: Einschalten | Power On
+# chapter 1: Register und Rechnen | Registers & Arithmetic
+# chapter 2: Sprünge und Schleifen | Jumps & Loops
+2-2-bis-zur-null.lvl
+# chapter 3: Bits und Zahlen | Bits & Numbers
+# chapter 4: Speicher | Memory
+# chapter 5: Stack und Unterprogramme | Stack & Subroutines
+# chapter 6: Rekursion | Recursion
+# chapter 7: Heap und Listen | Heap & Lists

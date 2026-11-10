@@ -28,11 +28,9 @@ step('cargo clippy -D warnings', () =>
 step('cargo test', () => run('cargo', ['test', '--workspace', '--locked']));
 step('build (wasm + dist)', () => run(process.execPath, [path.join('tools', 'build.mjs')]));
 
-step('check-levels --strict --mutate', () => {
-  if (!existsSync(path.join(ROOT, 'levels', 'manifest.txt'))) return { skip: 'levels/manifest.txt does not exist yet' };
-  const code = run('cargo', ['run', '-q', '--release', '--locked', '-p', 'stapelwerk-cli', '--', 'check-levels', '--strict', '--mutate', 'levels']);
-  return code === 2 ? { ok: false, note: 'check-levels is not implemented yet' } : code;
-});
+step('check-levels --strict --mutate', () =>
+  run('cargo', ['run', '-q', '--release', '--locked', '-p', 'stapelwerk-cli', '--', 'check-levels', '--strict', '--mutate', 'levels']),
+);
 
 step('isa-table matches docs/isa-table.md', () => {
   const r = capture('cargo', ['run', '-q', '--locked', '-p', 'stapelwerk-cli', '--', 'isa-table']);

@@ -1,0 +1,196 @@
+[level]
+id = 2-2-bis-zur-null
+version = 1
+chapter = 2
+order = 2
+kind = normal
+title.de = Bis zur Null
+title.en = Until Zero
+card.de = Eine Schleife, die so lange läuft, wie Daten kommen.
+card.en = A loop that runs for as long as data keeps coming.
+budget = 100000
+seed = 2202
+mobile = no
+
+[text.de]
+Die Eingabe ist eine Folge ganzer Zahlen. Wie viele es sind, weißt du vorher nicht. Das Ende erkennst du an einer **0**. Sie zählt nicht mit, sie ist nur die **Endmarke**.
+
+Gib die Summe aller Zahlen vor der 0 aus.
+
+Beispiel: Eingabe `3 4 5 0` → Ausgabe `12`.
+
+[text.en]
+The input is a sequence of integers. You don't know in advance how many there are. You recognise the end by a **0**. It doesn't count, it is just the **sentinel**.
+
+Output the sum of all numbers before the 0.
+
+Example: input `3 4 5 0` → output `12`.
+
+[hint.de]
+Du brauchst eine Schleife: lesen, prüfen, ob es die 0 ist, sonst dazuzählen, wieder von vorn. Überleg zuerst, in welchem Register die Summe die ganze Zeit liegen bleibt.
+---
+`cmp r0, 0` rechnet r0 − 0, verwirft das Ergebnis und setzt nur die Flags. Ist r0 null, ist Z gesetzt und `jz fertig` springt. Vorsicht: `sys READ_INT` schreibt jedes Mal nach r0. Setz einen Haltepunkt hinter das Lesen und beobachte die Flags.
+---
+```
+        mov r1, 0          ; Summe
+schleife:
+        sys READ_INT
+        cmp r0, 0
+        ; ??? springe zu fertig, wenn Z gesetzt ist
+        ; ??? zähle r0 zur Summe dazu
+        jmp schleife
+fertig:
+        ; ??? Summe nach r0, ausgeben
+        halt
+```
+
+[hint.en]
+You need a loop: read, check whether it is the 0, otherwise add it, start over. First think about which register keeps the sum the whole time.
+---
+`cmp r0, 0` computes r0 − 0, throws the result away and only sets the flags. If r0 is zero, Z is set and `jz fertig` jumps. Careful: `sys READ_INT` writes to r0 every time. Set a breakpoint after the read and watch the flags.
+---
+```
+        mov r1, 0          ; Summe (sum)
+schleife:
+        sys READ_INT
+        cmp r0, 0
+        ; ??? jump to fertig if Z is set
+        ; ??? add r0 to the sum
+        jmp schleife
+fertig:
+        ; ??? move the sum to r0, output it
+        halt
+```
+
+[learned.de]
+Du hast eine Schleife gebaut, deren Länge erst die Daten bestimmen. In C:
+
+```c
+int summe = 0, x;
+while ((x = read_int()) != 0) summe += x;
+```
+
+Die 0 am Ende ist eine **Endmarke**. Zeichenketten in C enden genauso, mit dem Byte 0.
+
+Echte Prozessoren: x86 schreibt `cmp eax, 0` und `je fertig`, ARM `cmp r0, #0` und `beq fertig`. **RISC-V hat gar keine Flags:** `beqz a0, fertig` vergleicht und springt in einem Befehl.
+
+**Profi-Blick:** Liest du die erste Zahl vor der Schleife und prüfst am Ende mit `jnz`, fällt das `jmp` weg: mehr Befehle, aber weniger Zyklen pro Zahl. Compiler machen das automatisch („Schleifenumkehr“). Kurz und schnell sind nicht dasselbe.
+
+[learned.en]
+You built a loop whose length is decided by the data. In C:
+
+```c
+int sum = 0, x;
+while ((x = read_int()) != 0) sum += x;
+```
+
+The 0 at the end is a **sentinel**. Strings in C end the same way, with the byte 0.
+
+Real processors: x86 writes `cmp eax, 0` and `je fertig`, ARM `cmp r0, #0` and `beq fertig`. **RISC-V has no flags at all:** `beqz a0, fertig` compares and branches in a single instruction.
+
+**Pro view:** If you read the first number before the loop and test with `jnz` at the end, the `jmp` disappears: more instructions, but fewer cycles per number. Compilers do this automatically ("loop inversion"). Short and fast are not the same thing.
+
+[start]
+; Bis zur Null
+; Lies Zahlen bis zur 0 und gib ihre Summe aus.
+
+        halt
+
+[reference]
+        mov r1, 0          ; r1 = Summe ; mutate:skip (Register starten ohnehin mit 0)
+schleife:
+        sys READ_INT       ; r0 = nächste Zahl
+        cmp r0, 0          ; Endmarke?
+        jz fertig
+        add r1, r0         ; Summe += Zahl
+        jmp schleife
+fertig:
+        mov r0, r1
+        sys WRITE_INT
+        halt
+
+[test]
+name = grundfall
+in = 3 4 5 0
+out = 12
+
+[test]
+name = leere-folge
+in = 0
+out = 0
+
+[test]
+name = negativ
+in = -7 10 0
+out = 3
+
+[test]
+name = zwischensumme-null
+in = 100 -100 42 0
+out = 42
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 17 -3 999 -1000 5 0
+out = 18
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 1 0
+out = 1
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = -5 0
+out = -5
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 1 2 3 4 5 6 7 8 9 10 0
+out = 55
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = -1 -1 -1 -1 0
+out = -4
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 1000000 2000000 -500000 0
+out = 2500000
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 7 7 7 7 7 7 7 7 7 7 7 7 0
+out = 84
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = -100 50 50 0
+out = 0
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = 0 5 6 0
+out = 0
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 40000 -1 0
+out = 39999
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = -2147483648 2147483647 0
+out = -1

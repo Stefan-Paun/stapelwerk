@@ -118,6 +118,16 @@ One file name per line in playing order. Chapter lines look like
 `run_tests` runs every test on a fresh machine with its budget. Each result has `passed`,
 `status`, `cycles`, `steps`, `fault` (or null) and `mismatch` (or null).
 
+Details of the comparison (in this order; the first failing check is the `mismatch`): a fault is
+reported as `fault` (no mismatch); any other status than `HALTED` is `check.not_halted` (also for
+`BUDGET_EXCEEDED`); function tests then check `r4`–`r7`, `fp`, `sp`; then `out`, `out_text`,
+`expect`/`expectb` (in file order), `expect_reg`, `expect_screen`, `expect_heap_empty`. `out`
+compares only the **number** entries of the output tape and `out_text` only the **byte** entries,
+each in order, so a program may separate numbers with characters. Word values in mismatches are
+signed. A function test whose label does not exist fails with `fault.bad_jump_target` (target 0);
+`r4`–`r7` and `fp` come from SplitMix64 seeded with the test seed (`runner::function_test_regs`),
+and reaching `__trap` ends the run without executing the trap word.
+
 Metrics: `cycles_avg` (average over all tests, rounded up), `cycles_max`, `steps_avg`, and `size`
 (instruction words in the player's file; `li` counts 2). Reference values `ref_cycles` and
 `ref_size` come from `[reference]` (or from the packed file). Badges in the UI: **Compact**
@@ -143,6 +153,18 @@ optimisations).
 removed, `ref_cycles`/`ref_size` are written into `[level]`, reference screens become
 `[image.__ref_TESTNAME]` sections (and the test is switched to that image), and `index.json` lists
 `id`, `chapter`, `order`, `kind`, titles, cards and `mobile` for every level.
+Packed files are named `<id>.lvl`; `index.json` is
+`{"version":1,"chapters":[{"chapter","title":{"de","en"}}],"levels":[{"id","chapter","order","kind","title","card","mobile"}]}`
+in manifest order. Packing refuses levels whose reference does not pass every test.
+
+Additional `--strict` rules: the file is named `<id>.lvl`, ids and (chapter, order) pairs are
+unique, every `.lvl` in the folder is listed in the manifest under its chapter line, the start code
+assembles, `ref_cycles`/`ref_size` do not appear in source files, `set`/`expect` symbols and `call`
+labels exist in the reference program, and `set` ranges lie inside one of the segments data, input,
+stack or screen (not the heap). Without `--strict` only parsing and the reference are checked.
+`--mutate` deletes one source line of the reference at a time (a label on that line stays); lines
+whose instructions are all `nop` are not mutated, and `mutate:skip` may appear anywhere in the
+line's comment.
 
 ## Command-line tool
 
@@ -158,6 +180,15 @@ removed, `ref_cycles`/`ref_size` are written into `[level]`, reference screens b
 | `pack-levels <dir> <target-dir>` | pack levels for the web build |
 | `isa-table` | print the generated instruction table; CI compares it with [isa-table.md](isa-table.md) |
 | `fuzz-gen --seed S --count N --out <dir>` | generate random programs plus `digests.txt` for the native-vs-WebAssembly differential test |
+
+`asm -o` writes a small image: the 8 bytes `STPWIMG1`, the text length and the data length in bytes
+(u32 little-endian each), the text words from 0x0100, then the data bytes from 0x4000. `run`
+prints the output on stdout (numbers in decimal, a newline between two consecutive numbers, bytes
+as they are) and the final status on stderr; it runs in test mode (input closed) with the default
+budget. `--trace` prints one line per executed instruction: step, `pc`, instruction, and the
+registers, flags and output it changed. `fuzz-gen` writes `fuzz-NNNNN.s` and `digests.txt`, one line
+per program: `file rand_seed budget status steps step:digest …` with the state digest every 1000
+steps and at the end (test mode, empty input).
 
 ## Sample level
 

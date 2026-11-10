@@ -1,9 +1,13 @@
 //! `stapelwerk` command-line tool (`docs/LEVELS.md`, "Command-line tool").
 //!
-//! Exit codes: 0 success, 1 failure (diagnostics, failed checks), 2 usage error or a command that
-//! is not implemented yet.
+//! Exit codes: 0 success, 1 failure (diagnostics, failed checks, faulting programs), 2 usage
+//! error.
 
 mod args;
+mod fuzz;
+mod levels_cmds;
+mod messages;
+mod program_cmds;
 
 use args::{CommandSpec, Opt, parse};
 use std::io::Write;
@@ -127,33 +131,38 @@ fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
             Ok(()) => 0,
             Err(_) => 1,
         },
+        "asm" => program_cmds::cmd_asm(&parsed, out, err),
+        "dis" => program_cmds::cmd_dis(&parsed, out, err),
+        "run" => program_cmds::cmd_run(&parsed, out, err),
+        "check-levels" => levels_cmds::cmd_check_levels(&parsed, out, err),
+        "pack-levels" => levels_cmds::cmd_pack_levels(&parsed, out, err),
         "fuzz-gen" => {
-            let seed_ok = parsed
-                .value("--seed")
-                .is_some_and(|s| s.parse::<u64>().is_ok());
-            let count_ok = parsed
-                .value("--count")
-                .is_some_and(|s| s.parse::<u32>().is_ok());
-            if !seed_ok || !count_ok {
+            let seed = parsed.value("--seed").and_then(|s| s.parse::<u64>().ok());
+            let count = parsed.value("--count").and_then(|s| s.parse::<u32>().ok());
+            let (Some(seed), Some(count)) = (seed, count) else {
                 let _ = writeln!(
                     err,
                     "stapelwerk: --seed must be a number 0…2^64-1 and --count a number 0…2^32-1"
                 );
                 return 2;
+            };
+            let dir = parsed.value("--out").unwrap_or(".");
+            match fuzz::generate(seed, count, std::path::Path::new(dir)) {
+                Ok(msg) => {
+                    let _ = writeln!(out, "{msg}");
+                    0
+                }
+                Err(e) => {
+                    let _ = writeln!(err, "stapelwerk: {e}");
+                    1
+                }
             }
-            not_implemented(spec, err)
         }
-        _ => not_implemented(spec, err),
+        other => {
+            let _ = writeln!(err, "stapelwerk: unknown command '{other}'");
+            2
+        }
     }
-}
-
-fn not_implemented(spec: &CommandSpec, err: &mut dyn Write) -> u8 {
-    let _ = writeln!(
-        err,
-        "stapelwerk {}: not implemented yet (planned for a later build phase, see docs/STATUS.md)",
-        spec.name
-    );
-    2
 }
 
 fn main() -> ExitCode {
@@ -199,19 +208,18 @@ mod tests {
     }
 
     #[test]
-    fn stubs_say_not_implemented() {
+    fn missing_files_fail_cleanly() {
         for args in [
-            &["asm", "a.s"][..],
-            &["dis", "a.img"],
-            &["run", "a.s", "--in", "3 4", "--trace"],
-            &["check-levels", "--strict", "--mutate", "levels"],
-            &["pack-levels", "levels", "dist/levels"],
-            &["fuzz-gen", "--seed", "1", "--count", "10", "--out", "x"],
+            &["asm", "does-not-exist.s"][..],
+            &["dis", "does-not-exist.img"],
+            &["run", "does-not-exist.s"],
         ] {
             let (code, _, err) = call(args);
-            assert_eq!(code, 2, "{args:?}");
-            assert!(err.contains("not implemented yet"), "{args:?}: {err}");
+            assert_eq!(code, 1, "{args:?}");
+            assert!(err.contains("cannot read"), "{args:?}: {err}");
         }
+        assert_eq!(call(&["check-levels", "does-not-exist"]).0, 2);
+        assert_eq!(call(&["run", "x.s", "--in", "1 zwei"]).0, 2);
     }
 
     #[test]

@@ -87,6 +87,54 @@ split of `asm/` (lexer, expr, parser, layout) is only a suggestion.
   layout and binding rules (`asm_layout.rs`).
 - Speed: a 502-line program assembles in about 1.5 ms natively (release, M3).
 
+### Phase 2A result (session, debugger, time travel)
+
+- `crates/core/src/session.rs` (+ `session/{call,inspect,lines}.rs`): `Session::new(SessionConfig)`
+  (library, filter, heap_check, seed, budget; `Default` = sandbox with budget 10⁷), `assemble`,
+  `load_program`, `reset(Option<TestSetup>)`, `step`, `run` (time slice, breakpoints via
+  `RunObserver`), `back`, `goto`, `back_to_change`, `set_reg`, breakpoints, `push_int`/`push_text`/
+  `close_input`; queries `view` (`StateView`, 96 bytes), `memory`, `shadow`, `output`, `fault`,
+  `symbols`, `linemap`, `line_counts`, `hottest_line`, `frames`, `heap_blocks`, `disasm`, `digest`,
+  `call_clobbered`. `TestSetup` is the hand-over from `[test]` to the session (same start order as
+  `runner::prepare_test`, checked by a test).
+- Time travel per SPEC §14: snapshots every K steps (K = 1024, > 64 → thin, K doubles); a snapshot
+  holds the state *before* the edits of its step; `goto` restores in place and replays with the
+  edit log; line counters are saved with each snapshot.
+- Clarifications: `goto` lands on PAUSED (or HALTED); faults, breakpoints, waiting and the budget
+  reappear on the next `step`/`run`. A time slice that ends right before a breakpoint reports
+  BREAKPOINT (no breakpoint is skipped at slice boundaries). Register indices 10 = flags (low 4 bits),
+  11 = pc for `set_reg`/`back_to_change`. Function tests end at `__trap` without executing it (also
+  when the budget is reached exactly there). Breakpoints only on line-map addresses; cleared by
+  `assemble`. A failed `assemble` drops the program. Output vectors reserve 8192 entries once, so
+  all exported buffers keep their address for the whole session.
+- Tests: `session_timetravel.rs` (≈ 540 000 steps, 4 thinnings, digests and line counters at random
+  `goto`s, `set_reg` edits, input while WAITING_INPUT incl. back-and-forward without input,
+  discarded future), `session_debugger.rs` (16 tests), `session_bench.rs` (`#[ignore]`).
+- Speed (release, M3): `back(1)` after 10⁶ steps ≈ 27 µs on average, worst case `goto` to one step
+  before a snapshot boundary (K = 16384) ≈ 0.3 ms; 10⁶ steps forward ≈ 28 ms.
+
+### Phase 2B result (levels, test runner, CLI)
+
+- `level::parse` complete (all sections and keys, `[image.NAME]`, exactly 3 hints per language,
+  every `lvl.*` key with file line and UTF-16 column, at most 50 diagnostics, never panics);
+  `Level::info_json` (`level_info`), `Level::hints`; `level::pack` (`pack_source`,
+  `parse_manifest`, `index_json`).
+- `runner`: `assemble_level`, `prepare_test`/`run_prepared` (fresh `Machine` per test, no
+  session), `run_test`, `run_tests`, `run_tests_with`, `run_reference`, `reference_screen`,
+  function tests via `session::prepare_call`/`run_to_end` (same loop and cycle count as the
+  debugger), `TestReport::to_json` (`sess_run_tests` shape with `input`), `pack_level`;
+  `TestCase::to_setup` builds the session's `TestSetup`. Comparison order and output semantics:
+  LEVELS.md.
+- CLI: `asm`, `dis`, `run` (`--in`, `--in-text`, `--trace`), `check-levels [--strict] [--mutate]`,
+  `pack-levels`, `isa-table`, `fuzz-gen`; English messages for every key; exit codes 0/1/2.
+- `levels/manifest.txt` (8 chapters) and the sample level 2.2 (4 visible + 11 hidden tests; the
+  redundant `mov r1, 0` carries `; mutate:skip` because registers start at 0).
+- `npm run check` and CI now run `check-levels --strict --mutate levels/`; the CI fuzz job
+  generates programs and digests; the differential test itself stays guarded until phase 3.
+- Tests: `tests/level_parse.rs` (every `lvl.*` key, no panic on 4000 corrupted files incl.
+  runner and packer), `tests/runner_tests.rs` (every test kind and `check.*` key, function tests,
+  heap, budget, JSON, pack round trip), `crates/cli/tests/cli_commands.rs` (end to end).
+
 ## Clarifications made in phase 0
 
 These fill gaps in the original design; they are documented in ISA.md and ABI.md.
@@ -124,7 +172,7 @@ These fill gaps in the original design; they are documented in ISA.md and ABI.md
 | 5 | text round trip `asm(dis(w)) == w` for random valid instructions and immediate limits | done (1B) |
 | 6 | assembler golden tests `tests/asm/*.s` (`; expect-word:`, `; expect-error: key line:col`) | done (1B) |
 | 7 | no panic on random bytes / corrupted sources (assembler, level parser, machine) | assembler and machine done; levels open |
-| 8 | time-travel invariant `digest(goto(k)) == d_k` in random order, thinning ≥ 3×, with input while WAITING_INPUT and `set_reg` | session phase |
+| 8 | time-travel invariant `digest(goto(k)) == d_k` in random order, thinning ≥ 3×, with input while WAITING_INPUT and `set_reg` | done (2A) |
 | 9 | every `fault.*` key has a triggering test (reads ERRORS.md via `include_str!`) | 1A (key list ↔ ERRORS.md already checked) |
 | 10 | differential test native vs. WASM via `fuzz-gen` | WASM ABI phase |
 | 11 | `check-levels --strict --mutate levels/` | levels phase |

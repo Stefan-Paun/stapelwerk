@@ -20,12 +20,7 @@ jobs:
       # ALU vector test (ignored until phase 1A) out; drop it once no placeholder is ignored.
       - run: cargo test --workspace --release --frozen -- --ignored exhaustive
       - name: check levels
-        run: |
-          if [ -f levels/manifest.txt ]; then
-            cargo run -q --release --frozen -p stapelwerk-cli -- check-levels --strict --mutate levels/
-          else
-            echo "::notice::levels/manifest.txt does not exist yet, check-levels skipped"
-          fi
+        run: cargo run -q --release --frozen -p stapelwerk-cli -- check-levels --strict --mutate levels/
       - name: isa-table matches docs/isa-table.md
         run: cargo run -q --frozen -p stapelwerk-cli -- isa-table | diff - docs/isa-table.md
       - name: zero third-party crates
@@ -79,11 +74,12 @@ jobs:
         with:
           node-version: 24
       - run: rustup toolchain install
+      - name: generate random programs and native digests
+        run: cargo run -q --release --frozen -p stapelwerk-cli -- fuzz-gen --seed "$GITHUB_RUN_NUMBER" --count 200 --out target/fuzz
       - name: differential test native vs. WebAssembly
         run: |
           if [ -f test/fuzz/differential.mjs ]; then
             npm run build
-            cargo run -q --release --frozen -p stapelwerk-cli -- fuzz-gen --seed "$GITHUB_RUN_NUMBER" --count 200 --out target/fuzz
             node test/fuzz/differential.mjs target/fuzz
           else
             echo "::notice::differential test (test/fuzz/differential.mjs) does not exist yet, skipped"
