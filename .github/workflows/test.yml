@@ -1,0 +1,90 @@
+name: test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Installs the toolchain, components and targets pinned in rust-toolchain.toml.
+      - run: rustup toolchain install
+      - run: cargo --version && rustc --version
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --frozen -- -D warnings
+      - run: cargo test --workspace --frozen
+      # Exhaustive tests (2^32 encodings). The name filter keeps phase placeholders such as the
+      # ALU vector test (ignored until phase 1A) out; drop it once no placeholder is ignored.
+      - run: cargo test --workspace --release --frozen -- --ignored exhaustive
+      - name: check levels
+        run: |
+          if [ -f levels/manifest.txt ]; then
+            cargo run -q --release --frozen -p stapelwerk-cli -- check-levels --strict --mutate levels/
+          else
+            echo "::notice::levels/manifest.txt does not exist yet, check-levels skipped"
+          fi
+      - name: isa-table matches docs/isa-table.md
+        run: cargo run -q --frozen -p stapelwerk-cli -- isa-table | diff - docs/isa-table.md
+      - name: zero third-party crates
+        run: test "$(grep -c '^source = ' Cargo.lock || true)" = 0
+
+  site:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: rustup toolchain install
+      - run: npm run build
+      - run: npm test
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: rustup toolchain install
+      - run: npm run build
+      # Chrome is preinstalled on ubuntu-latest.
+      - run: echo "CHROME_PATH=$(command -v google-chrome || command -v google-chrome-stable)" >> "$GITHUB_ENV"
+      - run: npm run test:browser
+        env:
+          STAPELWERK_REQUIRE_BROWSER: '1'
+
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: rustup toolchain install
+      - name: differential test native vs. WebAssembly
+        run: |
+          if [ -f test/fuzz/differential.mjs ]; then
+            npm run build
+            cargo run -q --release --frozen -p stapelwerk-cli -- fuzz-gen --seed "$GITHUB_RUN_NUMBER" --count 200 --out target/fuzz
+            node test/fuzz/differential.mjs target/fuzz
+          else
+            echo "::notice::differential test (test/fuzz/differential.mjs) does not exist yet, skipped"
+          fi

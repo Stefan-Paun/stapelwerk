@@ -1,0 +1,5 @@
+# Determinism: iteration order of hashed collections is not stable across runs and targets.
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "non-deterministic iteration order; use BTreeMap or a sorted Vec" },
+    { path = "std::collections::HashSet", reason = "non-deterministic iteration order; use BTreeSet or a sorted Vec" },
+]

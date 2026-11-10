@@ -1,0 +1,16 @@
+[package]
+name = "stapelwerk-cli"
+description = "Command-line tool for Stapelwerk: assemble, run, check and pack levels"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "stapelwerk"
+path = "src/main.rs"
+
+[dependencies]
+stapelwerk-core = { path = "../core" }

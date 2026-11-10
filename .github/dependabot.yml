@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Stapelwerk has no crates and no npm packages; Dependabot keeps the pinned actions current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # init and analyze must have the same version, otherwise CodeQL fails
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"

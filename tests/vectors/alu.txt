@@ -1,0 +1,122 @@
+# ALU test vectors for Stapelwerk (docs/ISA.md, "Flags" and "Semantics").
+#
+# Format:  op a b -> result FLAGS
+#   op      add sub mul div divu rem remu and or xor shl shr sar cmp tst
+#   a, b    32-bit operands: decimal (may be negative, two's complement) or 0x hex
+#   result  always 0x + 8 lower-case hex digits (for cmp/tst: the discarded value a-b / a&b)
+#   FLAGS   the complete new flag word as letters in the order Z N C V, or "-" for none
+#   "-> fault.div_zero" instead of result and flags for division/remainder by zero
+# Shift widths come from a register and are taken & 31 (32 -> 0, 33 -> 1).
+# neg rd, rs behaves like "sub 0 rs"; not like "xor rs 0xffffffff".
+# Every line was worked out by hand and cross-checked against an independent model.
+
+# --- add: C = carry out of bit 31, V = signed overflow
+add 0 0 -> 0x00000000 Z
+add 5 7 -> 0x0000000c -
+add 1 -1 -> 0x00000000 ZC
+add -1 0 -> 0xffffffff N
+add 0x7fffffff 1 -> 0x80000000 NV
+add 0x80000000 0x80000000 -> 0x00000000 ZCV
+add 0xffffffff 0xffffffff -> 0xfffffffe NC
+add 0x80000000 0xffffffff -> 0x7fffffff CV
+add 0x7fffffff 0x80000000 -> 0xffffffff N
+
+# --- sub: C = borrow (a < b unsigned, x86 convention), V = signed overflow
+sub 0 0 -> 0x00000000 Z
+sub 1 1 -> 0x00000000 Z
+sub 1 0 -> 0x00000001 -
+sub 0 1 -> 0xffffffff NC
+sub 5 3 -> 0x00000002 -
+sub 3 5 -> 0xfffffffe NC
+sub 0x80000000 1 -> 0x7fffffff V
+sub 0x7fffffff 0xffffffff -> 0x80000000 NCV
+sub 0 0x80000000 -> 0x80000000 NCV
+sub 0xffffffff 0xffffffff -> 0x00000000 Z
+
+# --- cmp: flags of a - b
+cmp 3 5 -> 0xfffffffe NC
+cmp 5 5 -> 0x00000000 Z
+cmp 0x80000000 1 -> 0x7fffffff V
+cmp 0xffffffff 1 -> 0xfffffffe N
+
+# --- mul: C = product does not fit u32, V = product does not fit i32
+mul 6 7 -> 0x0000002a -
+mul 0 0x12345 -> 0x00000000 Z
+mul 0x10000 0x10000 -> 0x00000000 ZCV
+mul 0xffffffff 0xffffffff -> 0x00000001 C
+mul 0xffffffff 2 -> 0xfffffffe NC
+mul -3 4 -> 0xfffffff4 NC
+mul 0x80000000 0xffffffff -> 0x80000000 NCV
+mul 0x7fffffff 2 -> 0xfffffffe NV
+mul 0x10000 0x8000 -> 0x80000000 NV
+
+# --- div / rem (signed): round toward 0, remainder has the sign of the dividend,
+#     INT_MIN / -1 = INT_MIN with V = 1 and remainder 0 with V = 1; C always 0
+div 7 2 -> 0x00000003 -
+div -7 2 -> 0xfffffffd N
+div 7 -2 -> 0xfffffffd N
+div -7 -2 -> 0x00000003 -
+div 0 5 -> 0x00000000 Z
+div 0x80000000 1 -> 0x80000000 N
+div 0x80000000 0xffffffff -> 0x80000000 NV
+div 5 0 -> fault.div_zero
+rem 7 2 -> 0x00000001 -
+rem -7 2 -> 0xffffffff N
+rem 7 -2 -> 0x00000001 -
+rem -7 -2 -> 0xffffffff N
+rem 6 3 -> 0x00000000 Z
+rem 0x80000000 0xffffffff -> 0x00000000 ZV
+rem 5 0 -> fault.div_zero
+
+# --- divu / remu (unsigned): C = 0, V = 0
+divu 7 2 -> 0x00000003 -
+divu 0xffffffff 2 -> 0x7fffffff -
+divu 0x80000000 0xffffffff -> 0x00000000 Z
+divu 1 0 -> fault.div_zero
+remu 0xffffffff 10 -> 0x00000005 -
+remu 0x80000000 0xffffffff -> 0x80000000 N
+remu 7 0 -> fault.div_zero
+
+# --- and / or / xor / tst: C = 0, V = 0
+and 0xf0f0f0f0 0x0f0f0f0f -> 0x00000000 Z
+and 0xffffffff 0x80000000 -> 0x80000000 N
+and 0x12345678 0xff -> 0x00000078 -
+or 0 0 -> 0x00000000 Z
+or 0x80000000 1 -> 0x80000001 N
+xor 0xffffffff 0xffffffff -> 0x00000000 Z
+xor 0x0f0f0f0f 0xffffffff -> 0xf0f0f0f0 N
+tst 0x10 0x10 -> 0x00000010 -
+tst 0x10 0x01 -> 0x00000000 Z
+tst 0xffffffff 0x80000000 -> 0x80000000 N
+
+# --- shl: C = last bit shifted out (bit 32-k of a), 0 for width 0; V = 0
+shl 1 0 -> 0x00000001 -
+shl 0x80000000 0 -> 0x80000000 N
+shl 1 31 -> 0x80000000 N
+shl 3 31 -> 0x80000000 NC
+shl 1 32 -> 0x00000001 -
+shl 1 33 -> 0x00000002 -
+shl 0x80000000 1 -> 0x00000000 ZC
+shl 0xc0000000 33 -> 0x80000000 NC
+shl 0xffffffff 4 -> 0xfffffff0 NC
+
+# --- shr (logical): C = last bit shifted out (bit k-1 of a), 0 for width 0; V = 0
+shr 0x80000000 0 -> 0x80000000 N
+shr 0x80000000 31 -> 0x00000001 -
+shr 0xffffffff 31 -> 0x00000001 C
+shr 1 1 -> 0x00000000 ZC
+shr 0x80000000 32 -> 0x80000000 N
+shr 0x80000000 33 -> 0x40000000 -
+shr 3 33 -> 0x00000001 C
+shr 0xffffffff 4 -> 0x0fffffff C
+
+# --- sar (arithmetic): like shr but copies the sign bit; rounds toward minus infinity
+sar -1 0 -> 0xffffffff N
+sar 0x80000000 31 -> 0xffffffff N
+sar 0xffffffff 1 -> 0xffffffff NC
+sar -7 1 -> 0xfffffffc NC
+sar -8 2 -> 0xfffffffe N
+sar 0x7fffffff 31 -> 0x00000000 ZC
+sar 0x80000000 32 -> 0x80000000 N
+sar 0x80000000 33 -> 0xc0000000 N
+sar 0x40 6 -> 0x00000001 -

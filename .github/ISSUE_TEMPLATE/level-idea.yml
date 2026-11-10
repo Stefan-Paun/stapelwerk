@@ -1,0 +1,38 @@
+name: Level idea
+description: Suggest a new puzzle or an improvement to an existing level
+title: "[Level] "
+labels:
+  - level
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Levels teach computer architecture: what a real CPU and a C compiler do. See docs/CURRICULUM.md for the chapters and content rules, and docs/LEVELS.md for the file format.
+  - type: input
+    id: chapter
+    attributes:
+      label: Chapter
+      placeholder: "e.g. 3 – Bits & Numbers"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Learning goal
+      description: What should the player understand afterwards?
+    validations:
+      required: true
+  - type: textarea
+    id: task
+    attributes:
+      label: Task and tests
+      description: What does the program get as input, and what must it produce?
+    validations:
+      required: true
+  - type: textarea
+    id: real
+    attributes:
+      label: Connection to real CPUs (optional)
+      description: How do x86, ARM or RISC-V do this? Please only state facts you are sure about.
+    validations:
+      required: false

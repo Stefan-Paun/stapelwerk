@@ -1,0 +1,17 @@
+[package]
+name = "stapelwerk-wasm"
+description = "WebAssembly ABI of the Stapelwerk core (the only crate with unsafe code)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+name = "stapelwerk_wasm"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+stapelwerk-core = { path = "../core" }

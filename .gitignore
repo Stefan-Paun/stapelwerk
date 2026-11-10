@@ -1,0 +1,11 @@
+target/
+dist/
+.shots/
+node_modules/
+.impeccable/review/
+.impeccable/hook.cache.json
+.impeccable/build/
+.impeccable/live/
+.impeccable/config.local.json
+.impeccable/ref/
+.DS_Store
