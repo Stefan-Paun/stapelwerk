@@ -1,6 +1,6 @@
 {
   "name": "stapelwerk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Assembly puzzles on a small 32-bit teaching CPU, in the browser (Rust + WebAssembly, vanilla JS).",
   "license": "MIT",

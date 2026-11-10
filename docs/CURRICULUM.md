@@ -3,9 +3,12 @@
 Binding for everyone who writes levels. The machine is defined in [ISA.md](ISA.md); instruction and
 system call names there take precedence. The level file format is in [LEVELS.md](LEVELS.md).
 
-Markers: [S] screen level, [D] debugging level (start code contains a bug), [F] chapter final,
-[B] bonus (not required to progress). "S" in the tables is the difficulty (1–5). "Ref" is the
-estimated length of the reference solution in instructions (a guideline).
+Markers after the ID: [T] tutorial, [D] debugging level (start code contains a bug), [F] chapter
+final, [B] bonus (not required to progress). These four are the level's `kind` key in its `.lvl`
+file; a level without one of them is `kind = normal`. [S] marks a screen level (at least one test
+with `expect_screen`) and comes first when combined with a kind ([S][T], [S][B], [S][F]). "Diff"
+in the tables is the difficulty (1–5). "Ref" is the estimated length of the reference solution in
+instructions (a guideline).
 
 ## Positioning (for the README and the start page)
 
@@ -21,14 +24,14 @@ For upper secondary students, first-year students and teachers: no account, no d
 
 ## Chapter 0 – Power On (Einschalten)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
-| 0.1 [S] tutorial | Erster Schritt / First Step | Operate the debugger; read registers and the PC. | A finished program draws a face. Step through it, set a breakpoint on `auge:`, take one step back. (Checklist in the UI: step, breakpoint, run, step back.) | screen | registers, PC, step, step back, breakpoint, `halt` | 1 | given, ~12 |
+| 0.1 [S][T] | Erster Schritt / First Step | Operate the debugger; read registers and the PC. | A finished program draws a face. Step through it, set a breakpoint on `auge:`, take one step back. (Checklist in the UI: step, breakpoint, run, step back.) | screen | registers, PC, step, step back, breakpoint, `halt` | 1 | given, ~12 |
 | 0.2 | Ein Register ändern / Change a Register | Registers hold numbers; `mov` sets them, `sys WRITE_INT` prints r0. | The program prints 7. Stop before the output, set r0 to 42 in the debugger, then make the change permanent in the code (the test expects 42). | I/O | `mov`, `sys WRITE_INT`, editing registers in the debugger | 1 | 3 |
 
 ## Chapter 1 – Registers & Arithmetic (Register und Rechnen)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
 | 1.1 | Plus und Minus / Plus and Minus | Read values, keep them, compute with two operands. | Read a and b; print a+b, then a−b. | I/O | `sys READ_INT`, `add`, `sub`, short form | 1 | 10 |
 | 1.2 [S] | Erster Pixel / First Pixel | The screen is memory. | Read x, y, colour; set exactly that pixel (SCREEN + y·64 + x). | screen | `stb`, `mul`, `SCREEN`, address, byte, MMIO | 2 | 9 |
@@ -37,7 +40,7 @@ For upper secondary students, first-year students and teachers: no account, no d
 
 ## Chapter 2 – Jumps & Loops (Sprünge und Schleifen)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
 | 2.1 | Die größere Zahl / The Larger One | `cmp` sets flags, conditional jumps read them. | Read a and b; print the larger one. | I/O | `cmp`, Z/N/V, `jz jnz jlt jle jgt jge jmp`, labels | 2 | 8 |
 | 2.2 | Bis zur Null / Until Zero | A loop with a sentinel. | Read numbers until 0, print the sum. **Sample level, see [LEVELS.md](LEVELS.md#sample-level).** | I/O | loop, sentinel | 2 | 9 |
@@ -47,7 +50,7 @@ For upper secondary students, first-year students and teachers: no account, no d
 
 ## Chapter 3 – Bits & Numbers (Bits und Zahlen)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
 | 3.1 | Einsen zählen / Count the Ones | Masks, logical shifts; negative numbers are bits too. | Print the number of 1 bits (−1 → 32). | I/O | `and or xor not shl shr`, `0b`, `0x` | 3 | 8 |
 | 3.2 [S][B] | 8×8-Zeichen / 8×8 Glyph | Test bits and draw them. | Read x, y, colour and 8 row bytes (bit 7 on the left); draw the glyph. | screen | bit test with a mask, `tst` | 3 | 22 |
@@ -56,7 +59,7 @@ For upper secondary students, first-year students and teachers: no account, no d
 
 ## Chapter 4 – Memory (Speicher)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
 | 4.1 | Größter Wert / Largest Value | Arrays, base + index·4, alignment. | `anzahl` and `werte` lie at `INPUT` (the library defines `ANZAHL` and `WERTE` as constants). Write the maximum to `MAX` (library: an address in the data segment). | memory | `.data .word .space`, `ld st`, `[reg+imm]`, little-endian | 3 | 13 |
 | 4.2 [S][B] | Spiegelbild / Mirror | Two pointers, swapping. | Mirror the given picture horizontally. | screen (with initial image) | `ldb`, swapping | 4 | 20 |
@@ -65,16 +68,16 @@ For upper secondary students, first-year students and teachers: no account, no d
 
 ## Chapter 5 – Stack & Subroutines (Stack und Unterprogramme)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
 | 5.1 | Rückwärts / Backwards | The stack is LIFO; sp grows downwards. | Read numbers until 0, print them in reverse. | I/O | `push pop`, sp, stack view | 3 | 12 |
 | 5.2 [S] | Pixel als Funktion / Pixel Function | A subroutine following the calling convention. | Write `pixel` (r0 = x, r1 = y, r2 = colour); ignore pixels outside the screen. The checker calls `pixel` directly. | function + screen | `call ret`, return address, caller/callee-saved, `jae` (unsigned!) | 3 | 11 |
 | 5.3 [D] | Der vergessene Pop / The Forgotten Pop | Every path must balance the stack. | `max3` does `push r4`; one branch forgets the `pop` → `ret` jumps into nowhere (`fault.bad_return_address`). | I/O | reading the fault message, stack view | 3 | 16 |
-| 5.4 [F][S] | Linie / Line | Translate an algorithm from C; register pressure. | Read x0, y0, x1, y1, colour; draw the line with Bresenham's algorithm using the given `pixel` from the library. | screen | library function, spilling values to the stack | 5 | 35 |
+| 5.4 [S][F] | Linie / Line | Translate an algorithm from C; register pressure. | Read x0, y0, x1, y1, colour; draw the line with Bresenham's algorithm using the given `pixel` from the library. | screen | library function, spilling values to the stack | 5 | 35 |
 
 ## Chapter 6 – Recursion (Rekursion)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
 | 6.1 | Fakultät / Factorial | Stack frames with fp, prologue/epilogue. | `fak(n)` recursively (n ≤ 12); the checker calls `fak`. | function | fp, frame, local variable | 3 | 14 |
 | 6.2 [D] | Falscher Fibonacci / Fibonacci Gone Wrong | Caller- vs. callee-saved. | `fib(n)` keeps an intermediate value in r1; the recursive call destroys it. | function | frame chain, "back to the last change" | 4 | 20 |
@@ -83,7 +86,7 @@ For upper secondary students, first-year students and teachers: no account, no d
 
 ## Chapter 7 – Heap & Lists (Heap und Listen)
 
-| ID | Title DE / EN | Learning goal | Task | Test | New | S | Ref |
+| ID | Title DE / EN | Learning goal | Task | Test | New | Diff | Ref |
 |---|---|---|---|---|---|---|---|
 | 7.1 | Kettenglieder / Chain Links | Requesting and freeing memory, pointers, struct layout. | Read numbers until 0, prepend each to a list (node: `next` at 0, `wert` at 4), print the list, free everything. | I/O + heap empty | `sys ALLOC`, `sys FREE`, null pointer | 4 | 24 |
 | 7.2 [D] | Nach dem Freigeben / After Free | Access after free silently returns garbage. | Removes negative nodes but reads `next` only after `FREE` (which now holds 0xDDDDDDDD) → later crash with `fault.out_of_range`. `heap_check = off`. | I/O + heap empty | fill patterns, heap map, back to the last change | 4 | 26 |
