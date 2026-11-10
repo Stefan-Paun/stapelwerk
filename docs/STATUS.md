@@ -23,7 +23,7 @@ interface are done and tested. What is still open is listed at the end.
 
 | Check | Result |
 |---|---|
-| `cargo test --workspace` | 221 passed, 0 failed, 3 ignored (two benchmarks, the exhaustive 2³² test that CI runs in release mode) |
+| `cargo test --workspace` | 223 passed, 0 failed, 3 ignored (two benchmarks, the exhaustive 2³² test that CI runs in release mode) |
 | `node --test test/unit test/wasm test/site` | 94 passed |
 | `npm run test:browser` | 22 passed |
 | `check-levels --strict --mutate levels/` | 30 levels good; 550 of 550 deletions caught, 12 lines skipped with `; mutate:skip` |
