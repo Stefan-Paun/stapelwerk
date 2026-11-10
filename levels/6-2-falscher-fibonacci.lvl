@@ -1,0 +1,238 @@
+[level]
+id = 6-2-falscher-fibonacci
+version = 1
+chapter = 6
+order = 2
+kind = debug
+title.de = Falscher Fibonacci
+title.en = Fibonacci Gone Wrong
+card.de = Ein Zwischenwert überlebt den rekursiven Aufruf nicht.
+card.en = An intermediate value does not survive the recursive call.
+budget = 2000000
+seed = 6201
+mobile = yes
+
+[text.de]
+Diese Funktion soll die n-te **Fibonacci-Zahl** berechnen: fib(0) = 0, fib(1) = 1 und fib(n) = fib(n − 1) + fib(n − 2). Der Prüfer ruft `fib` mit n in r0 auf (0 ≤ n ≤ 20) und erwartet das Ergebnis in r0.
+
+Bis n = 3 stimmt alles, ab n = 4 kommt Unsinn heraus. Finde den Fehler und repariere ihn.
+
+Beispiel: r0 = 6 → r0 = 8. Die Funktion liefert aber 3.
+
+[text.en]
+This function should compute the n-th **Fibonacci number**: fib(0) = 0, fib(1) = 1 and fib(n) = fib(n − 1) + fib(n − 2). The checker calls `fib` with n in r0 (0 ≤ n ≤ 20) and expects the result in r0.
+
+Up to n = 3 everything is right, from n = 4 on the results are nonsense. Find the bug and fix it.
+
+Example: r0 = 6 → r0 = 8. But the function returns 3.
+
+[hint.de]
+Nach dem zweiten Aufruf wird fib(n − 1) gebraucht. In welchem Register liegt der Wert die ganze Zeit, und wer darf dieses Register laut **[Aufrufkonvention](handbuch:aufruf)** in der Zwischenzeit verändern?
+---
+Setz einen Haltepunkt auf `add r0, r1` und nimm dort den Knopf neben r1, der zu seiner letzten Änderung zurückspringt. Du landest in einem *anderen* Aufruf von `fib`. Die Rahmenkette in der Stack-Ansicht zeigt dir, in welchem.
+---
+Leg fib(n − 1) dort ab, wo kein Aufruf hinkommt, zum Beispiel in eine zweite lokale Variable bei `[fp - 8]`. Dann braucht der Rahmen 8 Bytes.
+```
+        call fib                 ; r0 = fib(n − 1)
+        ; ??? fib(n − 1) dort ablegen, wo der nächste Aufruf nicht hinkommt
+        ld r0, [fp - 4]
+        sub r0, 2
+        call fib                 ; r0 = fib(n − 2)
+        ; ??? fib(n − 1) zurückholen und addieren
+```
+
+[hint.en]
+After the second call, fib(n − 1) is needed. Which register holds that value all the time, and who is allowed to change that register in the meantime according to the **[calling convention](handbuch:aufruf)**?
+---
+Set a breakpoint on `add r0, r1`, then use the button next to r1 that jumps back to its last change. You land in a *different* call of `fib`. The frame chain in the stack view shows you which one.
+---
+Put fib(n − 1) where no call can reach it, for example into a second local variable at `[fp - 8]`. Then the frame needs 8 bytes.
+```
+        call fib                 ; r0 = fib(n − 1)
+        ; ??? put fib(n − 1) where the next call can't reach it
+        ld r0, [fp - 4]
+        sub r0, 2
+        call fib                 ; r0 = fib(n − 2)
+        ; ??? fetch fib(n − 1) back and add it
+```
+
+[learned.de]
+r1 ist **caller-saved**: Jede Funktion darf es verändern, auch `fib` selbst eine Rekursionsstufe tiefer. Was einen Aufruf überleben soll, gehört in den eigenen Rahmen oder in ein callee-saved Register (r4–r7), das die Funktion im Prolog sichert. In C kümmert sich der Compiler darum:
+
+```c
+int fib(int n) {
+    if (n < 2) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+```
+
+Er sieht, dass das Ergebnis von `fib(n - 1)` den zweiten Aufruf überleben muss, und legt es entsprechend ab.
+
+Echte Prozessoren teilen ihre Register genauso auf. Callee-saved sind bei x86-64 unter Linux `rbx`, `rbp` und `r12`–`r15`, bei ARM64 `x19`–`x28`, bei RISC-V `s0`–`s11`. Die Argumentregister sind überall caller-saved.
+
+**Profi-Blick:** Diese Rekursion ist langsam: fib(20) braucht 21 891 Aufrufe. Eine Schleife mit zwei Variablen schafft es in 20 Schritten.
+
+[learned.en]
+r1 is **caller-saved**: every function may change it, including `fib` itself one level of recursion deeper. Whatever must survive a call belongs in the function's own frame or in a callee-saved register (r4–r7) that the function saves in its prologue. In C the compiler takes care of this:
+
+```c
+int fib(int n) {
+    if (n < 2) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+```
+
+It sees that the result of `fib(n - 1)` must survive the second call and stores it accordingly.
+
+Real processors split their registers the same way. Callee-saved are `rbx`, `rbp` and `r12`–`r15` on x86-64 under Linux, `x19`–`x28` on ARM64, `s0`–`s11` on RISC-V. The argument registers are caller-saved everywhere.
+
+**Pro view:** This recursion is slow: fib(20) needs 21 891 calls. A loop with two variables does it in 20 steps.
+
+[start]
+; Falscher Fibonacci
+; fib: r0 = n (0 bis 20), Ergebnis fib(n) in r0.
+; Ab n = 4 stimmt das Ergebnis nicht. Finde den Fehler.
+
+fib:
+        push fp
+        mov fp, sp
+        sub sp, 4                ; lokale Variable: n
+        st r0, [fp - 4]          ; n sichern
+        cmp r0, 2
+        jlt .ende                ; fib(0) = 0, fib(1) = 1: r0 stimmt schon
+        sub r0, 1
+        call fib                 ; r0 = fib(n − 1)
+        mov r1, r0               ; fib(n − 1) merken
+        ld r0, [fp - 4]
+        sub r0, 2
+        call fib                 ; r0 = fib(n − 2)
+        add r0, r1               ; fib(n − 1) + fib(n − 2)
+.ende:
+        mov sp, fp
+        pop fp
+        ret
+
+[reference]
+fib:
+        push fp
+        mov fp, sp
+        sub sp, 8                ; lokale Variablen: n, fib(n − 1)
+        st r0, [fp - 4]          ; n sichern
+        cmp r0, 2
+        jlt .ende                ; fib(0) = 0, fib(1) = 1: r0 stimmt schon
+        sub r0, 1
+        call fib                 ; r0 = fib(n − 1)
+        st r0, [fp - 8]          ; repariert: im eigenen Rahmen merken
+        ld r0, [fp - 4]
+        sub r0, 2
+        call fib                 ; r0 = fib(n − 2)
+        ld r1, [fp - 8]          ; fib(n − 1) zurückholen
+        add r0, r1               ; fib(n − 1) + fib(n − 2)
+.ende:
+        mov sp, fp
+        pop fp
+        ret
+
+[test]
+name = fib-6
+call = fib
+reg r0 = 6
+expect_reg r0 = 8
+
+[test]
+name = fib-0
+call = fib
+reg r0 = 0
+expect_reg r0 = 0
+
+[test]
+name = fib-1
+call = fib
+reg r0 = 1
+expect_reg r0 = 1
+
+[test]
+name = fib-4
+call = fib
+reg r0 = 4
+expect_reg r0 = 3
+
+[test]
+name = verdeckt-1
+hidden = yes
+call = fib
+reg r0 = 2
+expect_reg r0 = 1
+seed = 6211
+
+[test]
+name = verdeckt-2
+hidden = yes
+call = fib
+reg r0 = 3
+expect_reg r0 = 2
+seed = 6212
+
+[test]
+name = verdeckt-3
+hidden = yes
+call = fib
+reg r0 = 5
+expect_reg r0 = 5
+seed = 6213
+
+[test]
+name = verdeckt-4
+hidden = yes
+call = fib
+reg r0 = 7
+expect_reg r0 = 13
+seed = 6214
+
+[test]
+name = verdeckt-5
+hidden = yes
+call = fib
+reg r0 = 8
+expect_reg r0 = 21
+seed = 6215
+
+[test]
+name = verdeckt-6
+hidden = yes
+call = fib
+reg r0 = 10
+expect_reg r0 = 55
+seed = 6216
+
+[test]
+name = verdeckt-7
+hidden = yes
+call = fib
+reg r0 = 12
+expect_reg r0 = 144
+seed = 6217
+
+[test]
+name = verdeckt-8
+hidden = yes
+call = fib
+reg r0 = 15
+expect_reg r0 = 610
+seed = 6218
+
+[test]
+name = verdeckt-9
+hidden = yes
+call = fib
+reg r0 = 18
+expect_reg r0 = 2584
+seed = 6219
+
+[test]
+name = verdeckt-10
+hidden = yes
+call = fib
+reg r0 = 20
+expect_reg r0 = 6765
+seed = 6220

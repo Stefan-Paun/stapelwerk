@@ -1,0 +1,471 @@
+[level]
+id = 5-2-pixel-als-funktion
+version = 1
+chapter = 5
+order = 2
+kind = normal
+title.de = Pixel als Funktion
+title.en = Pixel Function
+card.de = Dein erstes Unterprogramm: Andere rufen es mit call auf.
+card.en = Your first subroutine: other code calls it with call.
+budget = 10000
+seed = 5201
+mobile = no
+
+[text.de]
+Schreib dein erstes **Unterprogramm**: `pixel` setzt den Pixel (x, y) auf eine Farbe. Es bekommt x in r0, y in r1 und die Farbe in r2 und kehrt mit `ret` zurück. Liegt (x, y) außerhalb des Bildschirms, auch bei negativen Zahlen, tut es gar nichts.
+
+Der Prüfer ruft `pixel` mit `call` auf und kontrolliert die **[Aufrufkonvention](handbuch:aufruf)**: r4–r7, fp und sp müssen danach unverändert sein. r0–r3 darfst du frei benutzen.
+
+Beispiel: x = 2, y = 1, Farbe 4 → das Byte bei `SCREEN + 66` wird 4. Bei x = 70 passiert nichts.
+
+[text.en]
+Write your first **subroutine**: `pixel` sets pixel (x, y) to a colour. It gets x in r0, y in r1 and the colour in r2 and returns with `ret`. If (x, y) lies outside the screen, negative numbers included, it does nothing at all.
+
+The checker calls `pixel` with `call` and checks the **[calling convention](handbuch:aufruf)**: r4–r7, fp and sp must be unchanged afterwards. You may use r0–r3 freely.
+
+Example: x = 2, y = 1, colour 4 → the byte at `SCREEN + 66` becomes 4. With x = 70 nothing happens.
+
+[hint.de]
+Erst prüfen, dann malen: Ist x oder y zu groß oder zu klein, spring direkt zum `ret`. Sonst rechnest du die Adresse aus wie beim ersten Pixel. Ein einziger Vergleich pro Koordinate genügt, wenn du die Zahl ohne Vorzeichen liest.
+---
+`cmp r0, 64` und dann `jae` (springt bei „größer oder gleich, ohne Vorzeichen“): −1 ist ohne Vorzeichen 4 294 967 295, also auch zu groß. Lass r4–r7 in Ruhe, die gehören dem Aufrufer.
+---
+Ein Label mit Punkt wie `.ende` gilt nur innerhalb der Funktion darüber.
+```
+pixel:
+        cmp r0, SCREEN_W
+        jae .ende                ; x außerhalb
+        ; ??? dasselbe für y
+        ; ??? r1 = y·64 + x
+        li r3, SCREEN
+        ; ??? Adresse r3 + r1, dort Farbe r2 als Byte speichern
+.ende:
+        ret
+```
+
+[hint.en]
+Check first, then draw: if x or y is too large or too small, jump straight to `ret`. Otherwise compute the address as for the first pixel. One comparison per coordinate suffices if you read the number as unsigned.
+---
+`cmp r0, 64` followed by `jae` (jumps on "greater or equal, unsigned"): −1 read as unsigned is 4 294 967 295, so it is too large as well. Leave r4–r7 alone, they belong to the caller.
+---
+A label starting with a dot, like `.ende`, is only valid inside the function above it.
+```
+pixel:
+        cmp r0, SCREEN_W
+        jae .ende                ; x outside
+        ; ??? the same for y
+        ; ??? r1 = y·64 + x
+        li r3, SCREEN
+        ; ??? address r3 + r1, store colour r2 there as a byte
+.ende:
+        ret
+```
+
+[learned.de]
+Du hast eine Funktion nach der **Aufrufkonvention** geschrieben: Die Argumente kommen in r0–r3, `call` legt die **Rücksprungadresse** auf den Stack, `ret` holt sie zurück. In C:
+
+```c
+void pixel(unsigned x, unsigned y, int farbe) {
+    if (x >= 64 || y >= 64) return;
+    bildschirm[y * 64 + x] = farbe;
+}
+```
+
+Mit `unsigned` wird aus `x < 0 || x >= 64` ein einziger Vergleich, genau dein `jae`. Optimierende Compiler wenden diesen Trick von sich aus an.
+
+**caller-saved** (r0–r3) heißt: Wer aufruft, muss sie selbst retten, wenn er sie noch braucht. **callee-saved** (r4–r7, fp) heißt: Die aufgerufene Funktion muss sie unverändert zurückgeben.
+
+Echte Prozessoren: x86 legt die Rücksprungadresse wie Stapelwerk auf den Stack. ARM64 und RISC-V legen sie in ein Register (`x30` bzw. `ra`), daher muss eine Funktion, die selbst nichts aufruft, den Stack dort gar nicht anfassen.
+
+[learned.en]
+You wrote a function that follows the **calling convention**: arguments arrive in r0–r3, `call` puts the **return address** on the stack, `ret` takes it back. In C:
+
+```c
+void pixel(unsigned x, unsigned y, int colour) {
+    if (x >= 64 || y >= 64) return;
+    screen[y * 64 + x] = colour;
+}
+```
+
+With `unsigned`, `x < 0 || x >= 64` becomes a single comparison, exactly your `jae`. Optimising compilers apply this trick on their own.
+
+**Caller-saved** (r0–r3) means: whoever calls must save them if they are still needed. **Callee-saved** (r4–r7, fp) means: the called function must return them unchanged.
+
+Real processors: x86 puts the return address on the stack, like Stapelwerk. ARM64 and RISC-V put it in a register (`x30` or `ra`), so a function that calls nothing else doesn't have to touch the stack at all there.
+
+[start]
+; Pixel als Funktion
+; pixel: r0 = x, r1 = y, r2 = Farbe. Außerhalb des Bildschirms: nichts tun.
+
+pixel:
+        ret
+
+[reference]
+pixel:
+        cmp r0, SCREEN_W
+        jae .ende                ; x < 0 oder x >= 64 (ohne Vorzeichen gelesen)
+        cmp r1, SCREEN_H
+        jae .ende                ; y ebenso
+        mul r1, SCREEN_W         ; r1 = y·64
+        add r1, r0               ; r1 = y·64 + x
+        li r3, SCREEN
+        add r1, r3               ; r1 = Adresse des Pixels
+        stb r2, [r1]
+.ende:
+        ret
+
+[test]
+name = mitte
+call = pixel
+reg r0 = 2
+reg r1 = 1
+reg r2 = 4
+expect_screen = MITTE_SOLL
+
+[test]
+name = ecke-unten-rechts
+call = pixel
+reg r0 = 63
+reg r1 = 63
+reg r2 = 14
+expect_screen = ECKE_SOLL
+
+[test]
+name = x-negativ
+call = pixel
+reg r0 = -1
+reg r1 = 5
+reg r2 = 9
+expect_screen = LEER
+
+[test]
+name = y-zu-gross
+call = pixel
+reg r0 = 5
+reg r1 = 64
+reg r2 = 3
+expect_screen = LEER
+
+[test]
+name = verdeckt-1
+hidden = yes
+call = pixel
+reg r0 = 0
+reg r1 = 0
+reg r2 = 15
+expect_screen = NULL_SOLL
+
+[test]
+name = verdeckt-2
+hidden = yes
+call = pixel
+reg r0 = 64
+reg r1 = 0
+reg r2 = 7
+expect_screen = LEER
+
+[test]
+name = verdeckt-3
+hidden = yes
+call = pixel
+reg r0 = 1000
+reg r1 = 3
+reg r2 = 2
+expect_screen = LEER
+
+[test]
+name = verdeckt-4
+hidden = yes
+call = pixel
+reg r0 = 3
+reg r1 = -2
+reg r2 = 9
+expect_screen = LEER
+expectb 0xEF83 = 0
+
+[test]
+name = verdeckt-5
+hidden = yes
+call = pixel
+reg r0 = -2147483648
+reg r1 = 0
+reg r2 = 5
+expect_screen = LEER
+
+[test]
+name = verdeckt-6
+hidden = yes
+call = pixel
+reg r0 = 10
+reg r1 = 20
+reg r2 = 28
+expect_screen = reference
+expectb 0xF50A = 28
+
+[test]
+name = verdeckt-7
+hidden = yes
+call = pixel
+reg r0 = 30
+reg r1 = 30
+reg r2 = 1
+screen_init = MUSTER
+expect_screen = reference
+
+[test]
+name = verdeckt-8
+hidden = yes
+call = pixel
+reg r0 = 63
+reg r1 = 0
+reg r2 = 6
+expect_screen = OBEN_RECHTS_SOLL
+
+[test]
+name = verdeckt-9
+hidden = yes
+call = pixel
+reg r0 = 0
+reg r1 = 63
+reg r2 = 11
+expect_screen = UNTEN_LINKS_SOLL
+
+[test]
+name = verdeckt-10
+hidden = yes
+call = pixel
+reg r0 = -1
+reg r1 = -1
+reg r2 = 4
+expect_screen = LEER
+
+[test]
+name = verdeckt-11
+hidden = yes
+call = pixel
+reg r0 = 17
+reg r1 = 63
+reg r2 = 3
+screen_init = MUSTER
+expect_screen = reference
+
+[test]
+name = verdeckt-12
+hidden = yes
+call = pixel
+reg r0 = 0
+reg r1 = 64
+reg r2 = 8
+expect_screen = LEER
+
+[image.LEER]
+.
+
+[image.MUSTER]
+........89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+........ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+........CDEF.123........CDEF.123........CDEF.123........CDEF.123
+........EF.12345........EF.12345........EF.12345........EF.12345
+.........1234567.........1234567.........1234567.........1234567
+........23456789........23456789........23456789........23456789
+........456789AB........456789AB........456789AB........456789AB
+........6789ABCD........6789ABCD........6789ABCD........6789ABCD
+.1234567.........1234567.........1234567.........1234567
+23456789........23456789........23456789........23456789
+456789AB........456789AB........456789AB........456789AB
+6789ABCD........6789ABCD........6789ABCD........6789ABCD
+89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+CDEF.123........CDEF.123........CDEF.123........CDEF.123
+EF.12345........EF.12345........EF.12345........EF.12345
+........89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+........ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+........CDEF.123........CDEF.123........CDEF.123........CDEF.123
+........EF.12345........EF.12345........EF.12345........EF.12345
+.........1234567.........1234567.........1234567.........1234567
+........23456789........23456789........23456789........23456789
+........456789AB........456789AB........456789AB........456789AB
+........6789ABCD........6789ABCD........6789ABCD........6789ABCD
+.1234567.........1234567.........1234567.........1234567
+23456789........23456789........23456789........23456789
+456789AB........456789AB........456789AB........456789AB
+6789ABCD........6789ABCD........6789ABCD........6789ABCD
+89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+CDEF.123........CDEF.123........CDEF.123........CDEF.123
+EF.12345........EF.12345........EF.12345........EF.12345
+........89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+........ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+........CDEF.123........CDEF.123........CDEF.123........CDEF.123
+........EF.12345........EF.12345........EF.12345........EF.12345
+.........1234567.........1234567.........1234567.........1234567
+........23456789........23456789........23456789........23456789
+........456789AB........456789AB........456789AB........456789AB
+........6789ABCD........6789ABCD........6789ABCD........6789ABCD
+.1234567.........1234567.........1234567.........1234567
+23456789........23456789........23456789........23456789
+456789AB........456789AB........456789AB........456789AB
+6789ABCD........6789ABCD........6789ABCD........6789ABCD
+89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+CDEF.123........CDEF.123........CDEF.123........CDEF.123
+EF.12345........EF.12345........EF.12345........EF.12345
+........89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+........ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+........CDEF.123........CDEF.123........CDEF.123........CDEF.123
+........EF.12345........EF.12345........EF.12345........EF.12345
+.........1234567.........1234567.........1234567.........1234567
+........23456789........23456789........23456789........23456789
+........456789AB........456789AB........456789AB........456789AB
+........6789ABCD........6789ABCD........6789ABCD........6789ABCD
+.1234567.........1234567.........1234567.........1234567
+23456789........23456789........23456789........23456789
+456789AB........456789AB........456789AB........456789AB
+6789ABCD........6789ABCD........6789ABCD........6789ABCD
+89ABCDEF........89ABCDEF........89ABCDEF........89ABCDEF
+ABCDEF.1........ABCDEF.1........ABCDEF.1........ABCDEF.1
+CDEF.123........CDEF.123........CDEF.123........CDEF.123
+EF.12345........EF.12345........EF.12345........EF.12345
+
+[image.MITTE_SOLL]
+.
+..4
+
+[image.ECKE_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+...............................................................E
+
+[image.NULL_SOLL]
+F
+
+[image.OBEN_RECHTS_SOLL]
+...............................................................6
+
+[image.UNTEN_LINKS_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+B

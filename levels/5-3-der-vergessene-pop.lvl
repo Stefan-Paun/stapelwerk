@@ -1,0 +1,258 @@
+[level]
+id = 5-3-der-vergessene-pop
+version = 1
+chapter = 5
+order = 3
+kind = debug
+title.de = Der vergessene Pop
+title.en = The Forgotten Pop
+card.de = Ein Weg durch die Funktion lässt etwas auf dem Stack liegen.
+card.en = One path through the function leaves something on the stack.
+budget = 100000
+seed = 5301
+mobile = yes
+
+[text.de]
+Das Programm liest eine Anzahl n und dann n Gruppen aus je drei Zahlen. Für jede Gruppe gibt es die größte Zahl aus. Die eigentliche Arbeit macht das Unterprogramm `max3`.
+
+Bei manchen Eingaben klappt das, bei anderen stürzt das Programm ab: `ret` springt an eine Adresse, an der gar kein Code steht. Finde heraus, warum, und repariere `max3`.
+
+Beispiel: Eingabe `2  3 1 2  4 5 9` → Ausgabe `3 9`.
+
+[text.en]
+The program reads a count n and then n groups of three numbers each. For each group it outputs the largest number. The real work is done by the subroutine `max3`.
+
+For some inputs this works, for others the program crashes: `ret` jumps to an address where there is no code at all. Find out why and repair `max3`.
+
+Example: input `2  3 1 2  4 5 9` → output `3 9`.
+
+[hint.de]
+Die Meldung sagt: `ret` hat vom Stack eine Zahl geholt, die keine Rücksprungadresse ist. Was liegt oben auf dem Stack, wenn `ret` ausgeführt wird? Jeder Weg durch eine Funktion muss den Stack so verlassen, wie er ihn vorgefunden hat.
+---
+Lass einen Test laufen, der abstürzt, und geh einen Schritt zurück. Die Stack-Ansicht zeigt, was `ret` holen wird. Vergleich den Wert mit r4 vor dem `call`. Zähl dann auf jedem Weg durch `max3` die `push` und `pop`.
+---
+Der Weg, auf dem c am größten ist:
+```
+.pruefe_c:
+        cmp r2, r4
+        jle .fertig
+        mov r0, r2               ; c ist am größten
+        ; ??? was muss noch vom Stack, bevor ret die Rücksprungadresse holt?
+        ret
+```
+
+[hint.en]
+The message says: `ret` took a number from the stack that is not a return address. What is on top of the stack when `ret` runs? Every path through a function must leave the stack exactly as it found it.
+---
+Run a test that crashes and step back once. The stack view shows what `ret` is about to take. Compare that value with r4 before the `call`. Then count the `push` and `pop` on every path through `max3`.
+---
+The path where c is the largest:
+```
+.pruefe_c:
+        cmp r2, r4
+        jle .fertig
+        mov r0, r2               ; c ist am größten (c is the largest)
+        ; ??? what must come off the stack before ret takes the return address?
+        ret
+```
+
+[learned.de]
+Jeder Weg durch eine Funktion muss den Stack **ausgleichen**: so viele `pop` wie `push`. Sonst holt `ret` statt der Rücksprungadresse einen gesicherten Wert, hier den alten r4, und springt dorthin.
+
+In C kann dir das nicht passieren. Der Compiler erzeugt Prolog und Epilog selbst und schickt jedes `return` durch den Epilog:
+
+```c
+int max3(int a, int b, int c) {
+    int m = a;
+    if (b > m) m = b;
+    if (c > m) return c;   // früher Ausstieg: in C kein Problem
+    return m;
+}
+```
+
+Echte Prozessoren: Auch auf x86 holt `ret` die Adresse blind vom Stack. Genau das nutzen Angriffe, die eine Rücksprungadresse überschreiben (**Stack Smashing**). Dagegen helfen Stack-Canaries des Compilers und auf neueren x86-Prozessoren ein **Schattenstack** (bei Intel Teil von CET), der jede Rücksprungadresse ein zweites Mal speichert und vergleicht.
+
+**Profi-Blick:** Gib jeder Funktion genau einen Epilog und lass alle Ausstiege dorthin springen. Dann kann kein Weg ein `pop` vergessen.
+
+[learned.en]
+Every path through a function must **balance** the stack: as many `pop` as `push`. Otherwise `ret` takes a saved value instead of the return address, here the old r4, and jumps there.
+
+This can't happen to you in C. The compiler generates prologue and epilogue itself and sends every `return` through the epilogue:
+
+```c
+int max3(int a, int b, int c) {
+    int m = a;
+    if (b > m) m = b;
+    if (c > m) return c;   // early exit: no problem in C
+    return m;
+}
+```
+
+Real processors: on x86, too, `ret` takes the address from the stack blindly. That is exactly what attacks exploit that overwrite a return address (**stack smashing**). Defences are stack canaries inserted by the compiler and, on newer x86 processors, a **shadow stack** (part of CET at Intel) that stores every return address a second time and compares.
+
+**Pro view:** Give every function exactly one epilogue and let all exits jump there. Then no path can forget a `pop`.
+
+[start]
+; Der vergessene Pop
+; Liest n und n Dreiergruppen, gibt jeweils die größte Zahl aus.
+; Bei manchen Eingaben stürzt es ab. Repariere max3.
+
+        sys READ_INT
+        mov r4, r0               ; r4 = Gruppen, die noch fehlen
+schleife:
+        cmp r4, 0
+        jz fertig
+        sys READ_INT
+        mov r5, r0               ; r5 = a
+        sys READ_INT
+        mov r1, r0               ; r1 = b
+        sys READ_INT
+        mov r2, r0               ; r2 = c
+        mov r0, r5               ; r0 = a
+        call max3                ; r0 = größte der drei
+        sys WRITE_INT
+        sub r4, 1
+        jmp schleife
+fertig:
+        halt
+
+; max3: r0 = a, r1 = b, r2 = c. Ergebnis in r0.
+max3:
+        push r4                  ; r4 gehört dem Aufrufer: sichern
+        mov r4, r0               ; r4 = bisher größte Zahl
+        cmp r1, r4
+        jle .pruefe_c
+        mov r4, r1
+.pruefe_c:
+        cmp r2, r4
+        jle .fertig
+        mov r0, r2               ; c ist am größten
+        ret
+.fertig:
+        mov r0, r4
+        pop r4
+        ret
+
+[reference]
+        sys READ_INT
+        mov r4, r0               ; r4 = Gruppen, die noch fehlen
+schleife:
+        cmp r4, 0
+        jz fertig
+        sys READ_INT
+        mov r5, r0               ; r5 = a
+        sys READ_INT
+        mov r1, r0               ; r1 = b
+        sys READ_INT
+        mov r2, r0               ; r2 = c
+        mov r0, r5               ; r0 = a
+        call max3                ; r0 = größte der drei
+        sys WRITE_INT
+        sub r4, 1
+        jmp schleife
+fertig:
+        halt
+
+; max3: r0 = a, r1 = b, r2 = c. Ergebnis in r0.
+max3:
+        push r4                  ; r4 gehört dem Aufrufer: sichern
+        mov r4, r0               ; r4 = bisher größte Zahl
+        cmp r1, r4
+        jle .pruefe_c
+        mov r4, r1
+.pruefe_c:
+        cmp r2, r4
+        jle .fertig
+        mov r0, r2               ; c ist am größten
+        pop r4                   ; repariert: auch hier r4 zurückholen
+        ret
+.fertig:
+        mov r0, r4
+        pop r4
+        ret
+
+[test]
+name = a-oder-b-am-groessten
+in = 2 3 1 2 4 9 5
+out = 3 9
+
+[test]
+name = c-am-groessten
+in = 1 1 2 3
+out = 3
+
+[test]
+name = beispiel
+in = 2 3 1 2 4 5 9
+out = 3 9
+
+[test]
+name = alle-gleich
+in = 1 7 7 7
+out = 7
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 0
+out = 
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 1 -5 -1 -3
+out = -1
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = 1 -5 -3 -1
+out = -1
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 3 0 0 1 1 0 0 0 1 0
+out = 1 1 1
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = 1 2147483647 -2147483648 0
+out = 2147483647
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 1 -2147483648 -2147483648 -2147483647
+out = -2147483647
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 3 5 5 6 6 5 5 5 6 5
+out = 6 6 6
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 2 9 3 9 3 9 9
+out = 9 9
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = 20 -19 347 -828 -27 -124 587 -142 378 300 -538 -905 306 -194 549 895 624 618 -723 217 739 -674 273 576 -697 -305 -638 -827 495 -705 207 603 25 564 278 945 856 953 984 590 -751 544 -644 -736 -540 -978 330 541 -496 -70 252 823 -445 53 -109 481 960 -968 -693 -21 -366
+out = 347 587 378 306 895 624 739 576 -305 495 603 945 984 544 -540 541 823 53 960 -21
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 60 -8 7 4 3 -2 4 5 -8 -9 -3 0 3 -4 -3 -6 0 9 5 4 -1 -9 9 9 8 7 9 5 6 9 -7 -5 6 2 -9 1 9 3 4 0 -7 -8 10 -5 -9 -10 10 4 0 -2 3 5 -5 -3 -2 7 -3 -2 9 2 10 2 2 2 9 10 -9 6 10 -8 -9 -3 5 -5 -1 -5 -4 1 -6 -1 4 -2 -9 0 9 4 -10 5 2 1 -6 -7 -9 -10 5 7 -8 10 -9 -8 -3 -6 8 10 -5 -4 2 -5 5 -6 0 -9 1 -7 0 -3 -3 4 6 -9 -9 5 -6 5 4 -2 1 -6 -10 -9 3 7 5 -4 2 5 2 8 -7 8 -10 5 1 8 -3 -3 4 8 9 -2 -1 -1 -4 6 -9 7 -9 -1 4 -8 -3 -3 2 5 -1 9 0 4 3 10 -4 -10 -1 5 -2 -4 -9 2 8 -5 -2
+out = 7 4 5 3 -3 9 4 9 9 9 6 9 4 10 -5 10 5 -2 7 10 2 10 10 5 -1 1 4 9 5 2 -7 7 10 8 10 5 0 1 4 6 5 4 -6 7 5 8 8 8 8 9 6 7 4 2 9 4 10 5 2 8
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = 5 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3
+out = 3 3 3 3 3

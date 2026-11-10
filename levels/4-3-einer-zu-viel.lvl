@@ -1,0 +1,203 @@
+[level]
+id = 4-3-einer-zu-viel
+version = 1
+chapter = 4
+order = 3
+kind = debug
+title.de = Einer zu viel
+title.en = One Too Many
+card.de = Die Summe stimmt nicht, weil die Schleife einmal zu oft läuft.
+card.en = The sum is wrong because the loop runs once too often.
+budget = 100000
+seed = 4301
+mobile = yes
+
+[text.de]
+Dieses Programm soll alle Werte des Arrays ab `WERTE` addieren und die Summe nach `SUMME` schreiben. An `ANZAHL` steht, wie viele Werte es sind (mindestens 1).
+
+Die Summe stimmt aber nicht. Wie falsch sie ist, hängt davon ab, was im Speicher **hinter** dem Array steht. Finde den Fehler und repariere ihn.
+
+Beispiel: ab `ANZAHL` steht `3  10 20 30  99` → an `SUMME` soll `60` stehen, das Programm schreibt `159`.
+
+[text.en]
+This program should add up all values of the array at `WERTE` and write the sum to `SUMME`. `ANZAHL` holds how many values there are (at least 1).
+
+But the sum is wrong. How wrong depends on what lies in memory **behind** the array. Find the bug and fix it.
+
+Example: starting at `ANZAHL` memory holds `3  10 20 30  99` → `SUMME` should hold `60`, the program writes `159`.
+
+[hint.de]
+Ein Array hat in Assembler keine Grenze: Nichts hält das Programm davon ab, über das letzte Element hinaus zu lesen. Zähl nach, wie oft die Schleife bei drei Werten laufen müsste und wie oft sie wirklich läuft.
+---
+Die Zahlen links neben dem Code zählen, wie oft jede Zeile lief. Setz einen Haltepunkt auf `add r3, r0` und schau bei jedem Halt in der Speicheransicht, von welcher Adresse `ld` gelesen hat. Welcher Sprung entscheidet über den letzten Durchlauf?
+---
+Die Schleife endet mit diesen Zeilen. Beim letzten richtigen Durchlauf ist i nach `add` genau gleich anzahl.
+```
+        add r2, 1                ; i++
+        cmp r2, r1               ; i mit anzahl vergleichen
+        ; ??? zurück zu schleife nur, solange i < anzahl
+        st r3, [SUMME]
+```
+
+[hint.en]
+In assembly an array has no boundary: nothing stops the program from reading past the last element. Count how often the loop should run for three values and how often it really runs.
+---
+The numbers left of the code count how often each line ran. Set a breakpoint on `add r3, r0` and check in the memory view which address `ld` read at each stop. Which jump decides about the last round?
+---
+The loop ends with these lines. In the last correct round, i equals the count right after the `add`.
+```
+        add r2, 1                ; i++
+        cmp r2, r1               ; compare i with the count
+        ; ??? back to schleife only while i < count
+        st r3, [SUMME]
+```
+
+[learned.de]
+Du hast einen **Off-by-one-Fehler** gefunden: eine Schleife, die einmal zu oft läuft. In C sieht er so aus:
+
+```c
+for (int i = 0; i <= anzahl; i++)   // richtig: i < anzahl
+    summe += werte[i];
+```
+
+Auch C prüft keine Array-Grenzen. `werte[anzahl]` liest einfach das nächste Wort im Speicher, was immer dort liegt. Der C-Standard nennt das **undefiniertes Verhalten**: Alles darf passieren, auch dass es zufällig richtig aussieht.
+
+Echte Prozessoren prüfen keine Array-Grenzen. x86 hatte dafür einmal einen eigenen Befehl, `BOUND`; im 64-Bit-Modus gibt es ihn nicht mehr. Werkzeuge wie AddressSanitizer (Clang, GCC) bauen die Prüfung beim Übersetzen in das Programm ein.
+
+**Profi-Blick:** Über das Ende eines Puffers hinaus zu lesen, ist auch eine Sicherheitslücke. Heartbleed (OpenSSL, 2014) ließ Angreifer bis zu 64 KiB Speicher hinter einem Puffer auslesen, darunter geheime Schlüssel.
+
+[learned.en]
+You found an **off-by-one error**: a loop that runs once too often. In C it looks like this:
+
+```c
+for (int i = 0; i <= count; i++)   // correct: i < count
+    sum += values[i];
+```
+
+C doesn't check array bounds either. `values[count]` simply reads the next word in memory, whatever is there. The C standard calls this **undefined behaviour**: anything may happen, including the result looking right by chance.
+
+Real processors don't check array bounds. x86 once had an instruction for it, `BOUND`; it no longer exists in 64-bit mode. Tools such as AddressSanitizer (Clang, GCC) build the check into the program at compile time.
+
+**Pro view:** Reading past the end of a buffer is also a security hole. Heartbleed (OpenSSL, 2014) let attackers read up to 64 KiB of memory behind a buffer, secret keys included.
+
+[start]
+; Einer zu viel
+; Addiert die Werte ab WERTE und schreibt die Summe nach SUMME.
+; Die Summe stimmt nicht. Finde den Fehler.
+
+        ld r1, [ANZAHL]          ; r1 = anzahl (mindestens 1)
+        mov r2, 0                ; r2 = i
+        mov r3, 0                ; r3 = summe
+schleife:
+        mul r4, r2, 4            ; r4 = i·4
+        ld r0, [r4 + WERTE]      ; r0 = werte[i]
+        add r3, r0               ; summe += werte[i]
+        add r2, 1                ; i++
+        cmp r2, r1
+        jle schleife             ; noch ein Wert?
+        st r3, [SUMME]
+        halt
+
+[library]
+; Eingabe, von den Tests gesetzt
+.equ ANZAHL, INPUT              ; Anzahl der Werte (mindestens 1)
+.equ WERTE, INPUT + 4           ; die Werte, je ein Wort
+
+; Ergebnis
+.data
+SUMME:  .word 0
+
+[reference]
+        ld r1, [ANZAHL]          ; r1 = anzahl (mindestens 1)
+        mov r2, 0                ; r2 = i ; mutate:skip (Register starten ohnehin mit 0)
+        mov r3, 0                ; r3 = summe ; mutate:skip (Register starten ohnehin mit 0)
+schleife:
+        mul r4, r2, 4            ; r4 = i·4
+        ld r0, [r4 + WERTE]      ; r0 = werte[i]
+        add r3, r0               ; summe += werte[i]
+        add r2, 1                ; i++
+        cmp r2, r1
+        jlt schleife             ; repariert: nur solange i < anzahl
+        st r3, [SUMME]
+        halt
+
+[test]
+name = drei-werte
+set ANZAHL = 3 10 20 30 99
+expect SUMME = 60
+
+[test]
+name = ein-wert
+set ANZAHL = 1 5 1000
+expect SUMME = 5
+
+[test]
+name = mit-negativen
+set ANZAHL = 4 -4 8 -1 6 -50
+expect SUMME = 9
+
+[test]
+name = verdeckt-1
+hidden = yes
+set ANZAHL = 10 1 2 3 4 5 6 7 8 9 10 11
+expect SUMME = 55
+
+[test]
+name = verdeckt-2
+hidden = yes
+set ANZAHL = 1 -1 -1
+expect SUMME = -1
+
+[test]
+name = verdeckt-3
+hidden = yes
+set ANZAHL = 3 0 0 0 123456
+expect SUMME = 0
+
+[test]
+name = verdeckt-4
+hidden = yes
+set ANZAHL = 2 2147483647 1 5
+expect SUMME = -2147483648
+
+[test]
+name = verdeckt-5
+hidden = yes
+set ANZAHL = 2 100 -100 7
+expect SUMME = 0
+
+[test]
+name = verdeckt-6
+hidden = yes
+set ANZAHL = 7 7 7 7 7 7 7 7 7
+expect SUMME = 49
+
+[test]
+name = verdeckt-7
+hidden = yes
+set ANZAHL = 3 -30000 -30000 -30000 30000
+expect SUMME = -90000
+
+[test]
+name = verdeckt-8
+hidden = yes
+set ANZAHL = 12 457 -4323 2280 -1 206 1058 -1929 4498 -2939 2980 -2438 -4538 12
+expect SUMME = -4689
+
+[test]
+name = verdeckt-9
+hidden = yes
+set ANZAHL = 25 -794 3726 2949 -4935 4984 2119 -3692 796 -254 3722 262 -2651 -3843 -1431 4166 1992 2623 1123 3807 -867 -4079 4054 4621 -3863 -2165 689
+expect SUMME = 12370
+
+[test]
+name = verdeckt-10
+hidden = yes
+set ANZAHL = 50 4315 3302 1634 -2565 2731 -827 -1165 -4459 479 866 390 2852 4763 4648 4886 -664 -1566 3023 -4754 -2567 -4762 2377 -4643 -4133 184 3840 -1441 -3065 3134 -4997 1660 4437 -3434 -3504 -2859 1911 1933 -630 -3878 1672 -1662 1505 -2922 2156 -540 2280 -4050 -4416 -49 -1050 620
+expect SUMME = -9624
+
+[test]
+name = verdeckt-11
+hidden = yes
+set ANZAHL = 80 -1446 -4624 -3969 52 -4425 4410 -1431 -875 1369 -2057 -4412 -4681 537 124 3968 1095 3544 4113 -1202 2556 -3150 -688 -3154 667 -4289 2862 -2823 2076 621 4323 -2687 987 -1881 -4767 -4530 1630 -4717 3515 -3618 -2986 -965 -1746 -2120 4137 -4049 1391 -3973 4056 -3161 2361 -240 2319 -3291 -2279 -625 -4281 -1487 363 3701 -4049 -4524 -3972 3788 2722 -4399 4883 46 2029 -4231 -131 3145 3536 -595 1520 2985 2994 3498 -503 4011 518 600
+expect SUMME = -26581

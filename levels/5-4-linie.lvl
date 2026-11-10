@@ -1,0 +1,843 @@
+[level]
+id = 5-4-linie
+version = 1
+chapter = 5
+order = 4
+kind = final
+title.de = Linie
+title.en = Line
+card.de = Bresenham aus C übersetzen, mit mehr Variablen als Registern.
+card.en = Translate Bresenham from C, with more variables than registers.
+budget = 100000
+seed = 5401
+mobile = no
+
+[text.de]
+Lies x0, y0, x1, y1 und eine Farbe und zeichne eine Linie von (x0, y0) nach (x1, y1). Alle Punkte liegen auf dem Bildschirm. Die Bibliothek enthält die Funktion `pixel` aus Level 5.2 (r0 = x, r1 = y, r2 = Farbe). Übersetze diesen C-Code, den **Bresenham-Algorithmus**, der ohne Kommazahlen auskommt:
+
+```c
+int dx =  abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+int fehler = dx + dy;
+while (1) {
+    pixel(x0, y0, farbe);
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * fehler;
+    if (e2 >= dy) { fehler += dy; x0 += sx; }
+    if (e2 <= dx) { fehler += dx; y0 += sy; }
+}
+```
+
+Beispiel: Eingabe `2 3 6 3 4` → rote Linie von (2, 3) bis (6, 3).
+
+[text.en]
+Read x0, y0, x1, y1 and a colour and draw a line from (x0, y0) to (x1, y1). All points lie on the screen. The library contains the function `pixel` from level 5.2 (r0 = x, r1 = y, r2 = colour). Translate this C code, **Bresenham's algorithm**, which needs no fractions:
+
+```c
+int dx =  abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+int fehler = dx + dy;
+while (1) {
+    pixel(x0, y0, farbe);
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * fehler;
+    if (e2 >= dy) { fehler += dy; x0 += sx; }
+    if (e2 <= dx) { fehler += dx; y0 += sy; }
+}
+```
+
+(`fehler` means error, `farbe` colour.) Example: input `2 3 6 3 4` → a red line from (2, 3) to (6, 3).
+
+[hint.de]
+Zähl die Werte, die jeden `call pixel` überleben müssen: x0, y0, x1, y1, dx, dy, sx, sy, fehler, farbe. Das sind mehr, als es callee-saved Register gibt. Die Werte, die du selten brauchst, dürfen in den Speicher.
+---
+`pixel` darf r0–r3 zerstören, r4–r7 nicht. Leg die oft geänderten Werte in r4–r7 und den Rest mit `push` auf den Stack. Mit `ld r0, [sp + 8]` liest du ihn; solange du nichts mehr pushst, bleiben die Abstände gleich.
+---
+```
+; Stack nach sechs push: [sp + 20] x1, [sp + 16] y1,
+; [sp + 12] dx, [sp + 8] dy, [sp + 4] sx, [sp] sy
+; r4 = x0, r5 = y0, r6 = fehler, r7 = farbe
+schleife:
+        mov r0, r4
+        mov r1, r5
+        mov r2, r7
+        call pixel
+        ld r0, [sp + 20]         ; x1
+        cmp r4, r0
+        jnz weiter
+        ; ??? y0 mit y1 vergleichen, gleich: fertig
+weiter:
+        add r1, r6, r6           ; r1 = e2
+        ld r2, [sp + 8]          ; dy
+        cmp r1, r2
+        jlt pruefe_y
+        ; ??? fehler += dy, x0 += sx
+pruefe_y:
+        ; ??? if (e2 <= dx) { fehler += dx; y0 += sy; }
+        jmp schleife
+```
+
+[hint.en]
+Count the values that must survive every `call pixel`: x0, y0, x1, y1, dx, dy, sx, sy, fehler, farbe. That is more than there are callee-saved registers. The values you rarely need may go to memory.
+---
+`pixel` may destroy r0–r3, not r4–r7. Put the values that change often into r4–r7 and push the rest onto the stack. Read them with `ld r0, [sp + 8]`; as long as you push nothing else, the offsets stay fixed.
+---
+```
+; stack after six pushes: [sp + 20] x1, [sp + 16] y1,
+; [sp + 12] dx, [sp + 8] dy, [sp + 4] sx, [sp] sy
+; r4 = x0, r5 = y0, r6 = fehler, r7 = farbe
+schleife:
+        mov r0, r4
+        mov r1, r5
+        mov r2, r7
+        call pixel
+        ld r0, [sp + 20]         ; x1
+        cmp r4, r0
+        jnz weiter
+        ; ??? compare y0 with y1, equal: fertig
+weiter:
+        add r1, r6, r6           ; r1 = e2
+        ld r2, [sp + 8]          ; dy
+        cmp r1, r2
+        jlt pruefe_y
+        ; ??? fehler += dy, x0 += sx
+pruefe_y:
+        ; ??? if (e2 <= dx) { fehler += dx; y0 += sy; }
+        jmp schleife
+```
+
+[learned.de]
+Du hast einen echten Algorithmus aus C übersetzt und dabei **Registerdruck** erlebt: mehr Variablen als Register. Ein Compiler löst das genauso. Er verteilt die Variablen auf die Register und lagert den Rest auf den Stack aus; das heißt **Spilling**. Die oft gebrauchten Werte bekommen die Register, weil ein Speicherzugriff mehr kostet.
+
+Bresenham entwickelte den Algorithmus 1962 bei IBM, um einen Plotter zu steuern. `fehler` merkt sich, wie weit die gezeichneten Pixel von der echten Linie abweichen; Division und Kommazahlen braucht er nicht.
+
+Echte Prozessoren: x86-64 hat 16 allgemeine Register, ARM64 31, RISC-V 32. Je mehr Register, desto seltener muss ein Compiler auslagern.
+
+**Profi-Blick:** `[sp + 20]` funktioniert nur, solange `sp` stillhält. Pushst du zwischendurch etwas, verschieben sich alle Abstände. Deshalb richten Compiler meist einen festen Bezugspunkt ein, den Rahmenzeiger `fp`. Mehr dazu im nächsten Kapitel.
+
+[learned.en]
+You translated a real algorithm from C and experienced **register pressure**: more variables than registers. A compiler solves this the same way. It distributes the variables over the registers and moves the rest to the stack; this is called **spilling**. The busiest values get the registers, because a memory access costs more.
+
+Bresenham developed the algorithm in 1962 at IBM to drive a plotter. `fehler` keeps track of how far the drawn pixels deviate from the true line; it needs neither division nor fractions.
+
+Real processors: x86-64 has 16 general-purpose registers, ARM64 31, RISC-V 32. The more registers there are, the less often a compiler has to spill.
+
+**Pro view:** `[sp + 20]` only works as long as `sp` stays put. Push something in between and all offsets shift. That is why compilers usually set up a fixed reference point, the frame pointer `fp`. More on that in the next chapter.
+
+[start]
+; Linie
+; Lies x0, y0, x1, y1, Farbe und zeichne die Linie nach Bresenham
+; (C-Code in der Aufgabe). pixel steht in der Bibliothek.
+
+        halt
+
+[library]
+; pixel(r0 = x, r1 = y, r2 = Farbe): setzt einen Pixel.
+; Außerhalb des Bildschirms passiert nichts. Verändert r0–r3.
+pixel:
+        cmp r0, SCREEN_W
+        jae .ende
+        cmp r1, SCREEN_H
+        jae .ende
+        mul r1, SCREEN_W         ; r1 = y·64
+        add r1, r0               ; r1 = y·64 + x
+        li r3, SCREEN
+        add r1, r3               ; r1 = Adresse des Pixels
+        stb r2, [r1]
+.ende:
+        ret
+
+[reference]
+; Eingabe lesen
+        sys READ_INT
+        mov r4, r0               ; r4 = x0
+        sys READ_INT
+        mov r5, r0               ; r5 = y0
+        sys READ_INT
+        mov r1, r0               ; r1 = x1
+        sys READ_INT
+        mov r2, r0               ; r2 = y1
+        sys READ_INT
+        mov r7, r0               ; r7 = farbe
+        push r1                  ; [sp + 20] = x1
+        push r2                  ; [sp + 16] = y1
+; dx = |x1 − x0|, sx = Schrittrichtung in x
+        sub r0, r1, r4           ; r0 = x1 − x0
+        mov r1, 1                ; r1 = sx
+        jge dx_fertig
+        neg r0
+        mov r1, -1
+dx_fertig:
+; dy = −|y1 − y0|, sy = Schrittrichtung in y
+        sub r2, r5               ; r2 = y1 − y0
+        mov r3, -1               ; r3 = sy
+        jlt dy_fertig            ; y1 < y0: y1 − y0 ist schon −|y1 − y0|
+        neg r2
+        mov r3, 1
+dy_fertig:
+        add r6, r0, r2           ; r6 = fehler = dx + dy
+        push r0                  ; [sp + 12] = dx
+        push r2                  ; [sp + 8]  = dy
+        push r1                  ; [sp + 4]  = sx
+        push r3                  ; [sp]      = sy
+schleife:
+        mov r0, r4
+        mov r1, r5
+        mov r2, r7
+        call pixel               ; pixel(x0, y0, farbe)
+        ld r0, [sp + 20]
+        cmp r4, r0               ; x0 == x1?
+        jnz weiter
+        ld r0, [sp + 16]
+        cmp r5, r0               ; y0 == y1?
+        jz fertig
+weiter:
+        add r1, r6, r6           ; r1 = e2 = 2·fehler
+        ld r2, [sp + 8]          ; r2 = dy
+        cmp r1, r2
+        jlt pruefe_y             ; e2 < dy: kein Schritt in x
+        add r6, r2               ; fehler += dy
+        ld r3, [sp + 4]
+        add r4, r3               ; x0 += sx
+pruefe_y:
+        ld r2, [sp + 12]         ; r2 = dx
+        cmp r1, r2
+        jgt schleife             ; e2 > dx: kein Schritt in y
+        add r6, r2               ; fehler += dx
+        ld r3, [sp]
+        add r5, r3               ; y0 += sy
+        jmp schleife
+fertig:
+        add sp, 24               ; Stack aufräumen ; mutate:skip (vor halt nicht beobachtbar, aber guter Stil)
+        halt
+
+[test]
+name = waagrecht
+in = 2 3 6 3 4
+expect_screen = WAAGRECHT_SOLL
+
+[test]
+name = flach
+in = 0 0 9 4 14
+expect_screen = FLACH_SOLL
+
+[test]
+name = steil-rueckwaerts
+in = 20 40 15 10 10
+expect_screen = STEIL_RUECKWAERTS_SOLL
+
+[test]
+name = ein-punkt
+in = 7 7 7 7 15
+expect_screen = EIN_PUNKT_SOLL
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 0 0 63 63 2
+expect_screen = LINIE_1_SOLL
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 63 0 0 63 5
+expect_screen = LINIE_2_SOLL
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = 10 5 10 60 9
+expect_screen = reference
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 60 30 1 30 12
+expect_screen = LINIE_4_SOLL
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = 63 63 0 0 1
+expect_screen = LINIE_5_SOLL
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 5 50 40 45 13
+expect_screen = reference
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 33 2 31 61 6
+expect_screen = LINIE_7_SOLL
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 0 63 63 62 11
+expect_screen = LINIE_8_SOLL
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = 24 49 32 21 5
+expect_screen = reference
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 42 50 16 48 10
+expect_screen = LINIE_10_SOLL
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = 29 56 5 37 14
+expect_screen = LINIE_11_SOLL
+
+[test]
+name = verdeckt-12
+hidden = yes
+in = 12 44 4 24 6
+expect_screen = reference
+
+[image.WAAGRECHT_SOLL]
+.
+.
+.
+..44444
+
+[image.FLACH_SOLL]
+EE
+..EE
+....EE
+......EE
+........EE
+
+[image.STEIL_RUECKWAERTS_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+...............A
+...............A
+...............A
+...............A
+................A
+................A
+................A
+................A
+................A
+................A
+.................A
+.................A
+.................A
+.................A
+.................A
+.................A
+..................A
+..................A
+..................A
+..................A
+..................A
+..................A
+...................A
+...................A
+...................A
+...................A
+...................A
+...................A
+....................A
+....................A
+....................A
+
+[image.EIN_PUNKT_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.......F
+
+[image.LINIE_1_SOLL]
+2
+.2
+..2
+...2
+....2
+.....2
+......2
+.......2
+........2
+.........2
+..........2
+...........2
+............2
+.............2
+..............2
+...............2
+................2
+.................2
+..................2
+...................2
+....................2
+.....................2
+......................2
+.......................2
+........................2
+.........................2
+..........................2
+...........................2
+............................2
+.............................2
+..............................2
+...............................2
+................................2
+.................................2
+..................................2
+...................................2
+....................................2
+.....................................2
+......................................2
+.......................................2
+........................................2
+.........................................2
+..........................................2
+...........................................2
+............................................2
+.............................................2
+..............................................2
+...............................................2
+................................................2
+.................................................2
+..................................................2
+...................................................2
+....................................................2
+.....................................................2
+......................................................2
+.......................................................2
+........................................................2
+.........................................................2
+..........................................................2
+...........................................................2
+............................................................2
+.............................................................2
+..............................................................2
+...............................................................2
+
+[image.LINIE_2_SOLL]
+...............................................................5
+..............................................................5
+.............................................................5
+............................................................5
+...........................................................5
+..........................................................5
+.........................................................5
+........................................................5
+.......................................................5
+......................................................5
+.....................................................5
+....................................................5
+...................................................5
+..................................................5
+.................................................5
+................................................5
+...............................................5
+..............................................5
+.............................................5
+............................................5
+...........................................5
+..........................................5
+.........................................5
+........................................5
+.......................................5
+......................................5
+.....................................5
+....................................5
+...................................5
+..................................5
+.................................5
+................................5
+...............................5
+..............................5
+.............................5
+............................5
+...........................5
+..........................5
+.........................5
+........................5
+.......................5
+......................5
+.....................5
+....................5
+...................5
+..................5
+.................5
+................5
+...............5
+..............5
+.............5
+............5
+...........5
+..........5
+.........5
+........5
+.......5
+......5
+.....5
+....5
+...5
+..5
+.5
+5
+
+[image.LINIE_4_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+[image.LINIE_5_SOLL]
+1
+.1
+..1
+...1
+....1
+.....1
+......1
+.......1
+........1
+.........1
+..........1
+...........1
+............1
+.............1
+..............1
+...............1
+................1
+.................1
+..................1
+...................1
+....................1
+.....................1
+......................1
+.......................1
+........................1
+.........................1
+..........................1
+...........................1
+............................1
+.............................1
+..............................1
+...............................1
+................................1
+.................................1
+..................................1
+...................................1
+....................................1
+.....................................1
+......................................1
+.......................................1
+........................................1
+.........................................1
+..........................................1
+...........................................1
+............................................1
+.............................................1
+..............................................1
+...............................................1
+................................................1
+.................................................1
+..................................................1
+...................................................1
+....................................................1
+.....................................................1
+......................................................1
+.......................................................1
+........................................................1
+.........................................................1
+..........................................................1
+...........................................................1
+............................................................1
+.............................................................1
+..............................................................1
+...............................................................1
+
+[image.LINIE_7_SOLL]
+.
+.
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+.................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+................................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+...............................6
+
+[image.LINIE_8_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+................................BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+[image.LINIE_10_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+................AAAAAAA
+.......................AAAAAAAAAAAAA
+....................................AAAAAAA
+
+[image.LINIE_11_SOLL]
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.....E
+......E
+.......EE
+.........E
+..........E
+...........E
+............EE
+..............E
+...............E
+................EE
+..................E
+...................E
+....................E
+.....................EE
+.......................E
+........................E
+.........................E
+..........................EE
+............................E
+.............................E

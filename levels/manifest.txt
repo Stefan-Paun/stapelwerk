@@ -1,10 +1,39 @@
 # Playing order. Chapter lines: "# chapter N: German title | English title".
 # chapter 0: Einschalten | Power On
+0-1-erster-schritt.lvl
+0-2-ein-register-aendern.lvl
 # chapter 1: Register und Rechnen | Registers & Arithmetic
+1-1-plus-und-minus.lvl
+1-2-erster-pixel.lvl
+1-3-ueberschrieben.lvl
+1-4-sekundenuhr.lvl
 # chapter 2: Sprünge und Schleifen | Jumps & Loops
+2-1-die-groessere-zahl.lvl
 2-2-bis-zur-null.lvl
+2-3-rechteck.lvl
+2-4-endlosschleife.lvl
+2-5-collatz.lvl
 # chapter 3: Bits und Zahlen | Bits & Numbers
+3-1-einsen-zaehlen.lvl
+3-2-8x8-zeichen.lvl
+3-3-halbe-wahrheit.lvl
+3-4-hex-ausgabe.lvl
 # chapter 4: Speicher | Memory
+4-1-groesster-wert.lvl
+4-2-spiegelbild.lvl
+4-3-einer-zu-viel.lvl
+4-4-sortieren.lvl
 # chapter 5: Stack und Unterprogramme | Stack & Subroutines
+5-1-rueckwaerts.lvl
+5-2-pixel-als-funktion.lvl
+5-3-der-vergessene-pop.lvl
+5-4-linie.lvl
 # chapter 6: Rekursion | Recursion
+6-1-fakultaet.lvl
+6-2-falscher-fibonacci.lvl
+6-3-flutfuellung.lvl
+6-4-tuerme-von-hanoi.lvl
 # chapter 7: Heap und Listen | Heap & Lists
+7-1-kettenglieder.lvl
+7-2-nach-dem-freigeben.lvl
+7-3-sortiert-einfuegen.lvl

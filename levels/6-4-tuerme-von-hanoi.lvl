@@ -1,0 +1,253 @@
+[level]
+id = 6-4-tuerme-von-hanoi
+version = 1
+chapter = 6
+order = 4
+kind = final
+title.de = Türme von Hanoi
+title.en = Towers of Hanoi
+card.de = Vier Argumente, zwei rekursive Aufrufe, über tausend Züge.
+card.en = Four arguments, two recursive calls, over a thousand moves.
+budget = 500000
+seed = 6401
+mobile = no
+
+[text.de]
+Lies n (1 ≤ n ≤ 10), den Start-Stab und den Ziel-Stab; die Stäbe heißen 1, 2 und 3. Auf dem Start-Stab liegen n Scheiben, die größte unten. Bring alle auf den Ziel-Stab: immer nur eine Scheibe auf einmal und nie eine größere auf eine kleinere. Gib jeden Zug als zwei Zahlen aus, von und nach. Übersetze dazu:
+
+```c
+void hanoi(int n, int von, int nach, int ueber) {
+    if (n == 0) return;
+    hanoi(n - 1, von, ueber, nach);
+    write_int(von);
+    write_int(nach);
+    hanoi(n - 1, ueber, nach, von);
+}
+// Hauptprogramm: n, von, nach lesen; ueber = 6 - von - nach
+```
+
+Beispiel: Eingabe `2 1 3` → Ausgabe `1 2  1 3  2 3`.
+
+[text.en]
+Read n (1 ≤ n ≤ 10), the start peg and the target peg; the pegs are called 1, 2 and 3. The start peg holds n discs, the largest at the bottom. Move them all to the target peg: only one disc at a time and never a larger one onto a smaller one. Output every move as two numbers, from and to. Translate this:
+
+```c
+void hanoi(int n, int von, int nach, int ueber) {
+    if (n == 0) return;
+    hanoi(n - 1, von, ueber, nach);
+    write_int(von);
+    write_int(nach);
+    hanoi(n - 1, ueber, nach, von);
+}
+// main program: read n, von, nach; ueber = 6 - von - nach
+```
+
+(`von` means from, `nach` to, `ueber` via.) Example: input `2 1 3` → output `1 2  1 3  2 3`.
+
+[hint.de]
+Vier Argumente passen genau in r0–r3. Nach dem ersten rekursiven Aufruf sind sie aber zerstört, und du brauchst alle vier noch. Jeder Aufruf muss sie also dort sichern, wo der nächste Aufruf sie nicht überschreibt.
+---
+Sichere r4–r7 am Anfang mit `push` und kopier die Argumente hinein; dort überleben sie jeden Aufruf. Vor jedem rekursiven Aufruf füllst du r0–r3 neu, in der Reihenfolge aus dem C-Code. Am Ende `pop` in umgekehrter Reihenfolge.
+---
+```
+hanoi:                           ; r0 = n, r1 = von, r2 = nach, r3 = ueber
+        cmp r0, 0
+        jz .zurueck
+        push r4
+        push r5
+        push r6
+        push r7
+        mov r4, r0               ; n
+        mov r5, r1               ; von
+        mov r6, r2               ; nach
+        mov r7, r3               ; ueber
+        ; ??? hanoi(n − 1, von, ueber, nach)
+        ; ??? von und nach ausgeben
+        ; ??? hanoi(n − 1, ueber, nach, von)
+        pop r7
+        pop r6
+        pop r5
+        pop r4
+.zurueck:
+        ret
+```
+
+[hint.en]
+Four arguments fit exactly into r0–r3. But after the first recursive call they are destroyed, and you still need all four. So every call must save them where the next call won't overwrite them.
+---
+Save r4–r7 at the start with `push` and copy the arguments into them; there they survive every call. Before each recursive call you fill r0–r3 again, in the order of the C code. At the end, `pop` in reverse order.
+---
+```
+hanoi:                           ; r0 = n, r1 = von, r2 = nach, r3 = ueber
+        cmp r0, 0
+        jz .zurueck
+        push r4
+        push r5
+        push r6
+        push r7
+        mov r4, r0               ; n
+        mov r5, r1               ; von (from)
+        mov r6, r2               ; nach (to)
+        mov r7, r3               ; ueber (via)
+        ; ??? hanoi(n − 1, von, ueber, nach)
+        ; ??? output von and nach
+        ; ??? hanoi(n − 1, ueber, nach, von)
+        pop r7
+        pop r6
+        pop r5
+        pop r4
+.zurueck:
+        ret
+```
+
+[learned.de]
+Du hast eine Rekursion mit mehreren Argumenten übersetzt. Jeder Aufruf hält seine vier Werte in r4–r7, und die Werte des Aufrufers liegen gesichert in seinem Rahmen auf dem Stack.
+
+n Scheiben brauchen 2ⁿ − 1 Züge, für n = 10 also 1023. Trotzdem ist die Rekursion nie tiefer als n + 1 Aufrufe: Der Stack wächst mit der **Tiefe**, nicht mit der Zahl der Aufrufe.
+
+Echte Prozessoren: Vier Argumente passen auch dort in Register, bei ARM64 in `x0`–`x7`, bei RISC-V in `a0`–`a7`, bei x86-64 unter Linux in `rdi`, `rsi`, `rdx`, `rcx`, `r8` und `r9`. Unter Windows hat x86-64 genau vier Argumentregister: `rcx`, `rdx`, `r8`, `r9`.
+
+**Profi-Blick:** Ein fünftes Argument käme bei Stapelwerk auf den Stack. Der Aufrufer legt es vor dem `call` mit `push` ab, und die aufgerufene Funktion findet es nach ihrem Prolog bei `[fp + 8]`, direkt über der Rücksprungadresse.
+
+[learned.en]
+You translated a recursion with several arguments. Every call keeps its four values in r4–r7, and the caller's values are saved in its frame on the stack.
+
+n discs need 2ⁿ − 1 moves, so 1023 for n = 10. Still, the recursion is never deeper than n + 1 calls: the stack grows with the **depth**, not with the number of calls.
+
+Real processors: four arguments fit into registers there too, on ARM64 in `x0`–`x7`, on RISC-V in `a0`–`a7`, on x86-64 under Linux in `rdi`, `rsi`, `rdx`, `rcx`, `r8` and `r9`. Under Windows, x86-64 has exactly four argument registers: `rcx`, `rdx`, `r8`, `r9`.
+
+**Pro view:** In Stapelwerk a fifth argument would go on the stack. The caller pushes it before the `call`, and after its prologue the called function finds it at `[fp + 8]`, right above the return address.
+
+[start]
+; Türme von Hanoi
+; Lies n, von, nach und gib alle Züge als Paare (von, nach) aus.
+; C-Code in der Aufgabe.
+
+        halt
+
+[reference]
+; Hauptprogramm
+        sys READ_INT
+        mov r4, r0               ; r4 = n
+        sys READ_INT
+        mov r1, r0               ; r1 = von
+        sys READ_INT
+        mov r2, r0               ; r2 = nach
+        mov r3, 6
+        sub r3, r1
+        sub r3, r2               ; r3 = ueber = 6 − von − nach
+        mov r0, r4
+        call hanoi
+        halt
+
+; hanoi(r0 = n, r1 = von, r2 = nach, r3 = ueber)
+hanoi:
+        cmp r0, 0 ; mutate:skip (das sub vor dem call setzt die Flags schon passend; der Vergleich zeigt die Absicht)
+        jz .zurueck              ; n == 0: nichts zu tun
+        push r4                  ; Prolog: callee-saved Register sichern
+        push r5
+        push r6
+        push r7
+        mov r4, r0               ; r4 = n
+        mov r5, r1               ; r5 = von
+        mov r6, r2               ; r6 = nach
+        mov r7, r3               ; r7 = ueber
+        sub r0, r4, 1            ; hanoi(n − 1, von, ueber, nach); r1 = von steht schon
+        mov r2, r7
+        mov r3, r6
+        call hanoi
+        mov r0, r5
+        sys WRITE_INT            ; von
+        mov r0, r6
+        sys WRITE_INT            ; nach
+        sub r0, r4, 1            ; hanoi(n − 1, ueber, nach, von)
+        mov r1, r7
+        mov r2, r6
+        mov r3, r5
+        call hanoi
+        pop r7                   ; Epilog: umgekehrte Reihenfolge
+        pop r6
+        pop r5
+        pop r4
+.zurueck:
+        ret
+
+[test]
+name = eine-scheibe
+in = 1 1 3
+out = 1 3
+
+[test]
+name = zwei-scheiben
+in = 2 1 3
+out = 1 2 1 3 2 3
+
+[test]
+name = drei-nach-2
+in = 3 1 2
+out = 1 2 1 3 2 3 1 2 3 1 3 2 1 2
+
+[test]
+name = rueckwaerts
+in = 2 3 1
+out = 3 2 3 1 2 1
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 4 1 3
+out = 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 5 2 3
+out = 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = 6 3 2
+out = 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 7 1 2
+out = 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = 8 2 1
+out = 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 9 3 1
+out = 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 10 1 3
+out = 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 3 1 2 3 2 1 3 1 3 2 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3 2 1 3 1 3 2 1 2 3 1 2 3 2 1 3 1 2 3 1 2 1 3 2 3 1 2 3 1 3 2 1 2 1 3 2 3 2 1 3 1 2 3 1 2 1 3 2 3
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 10 2 3
+out = 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 3 2 1 3 1 2 3 2 3 1 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3 1 2 3 2 3 1 2 1 3 2 1 3 1 2 3 2 1 3 2 1 2 3 1 3 2 1 3 2 3 1 2 1 2 3 1 3 1 2 3 2 1 3 2 1 2 3 1 3
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = 1 2 1
+out = 2 1
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 3 3 2
+out = 3 2 3 1 2 1 3 2 1 3 1 2 3 2

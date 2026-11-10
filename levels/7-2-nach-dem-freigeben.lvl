@@ -1,0 +1,307 @@
+[level]
+id = 7-2-nach-dem-freigeben
+version = 1
+chapter = 7
+order = 2
+kind = debug
+title.de = Nach dem Freigeben
+title.en = After Free
+card.de = Freigegebener Speicher liefert still Müll, und der Absturz kommt später.
+card.en = Freed memory silently returns garbage, and the crash comes later.
+budget = 200000
+seed = 7201
+heap_check = off
+mobile = yes
+
+[text.de]
+Das Programm liest Zahlen bis zur 0 in eine Liste (neue Knoten vorn, wie in „Kettenglieder“). Dann entfernt es alle Knoten mit negativem Wert, gibt die übrigen aus und gibt zum Schluss alles frei.
+
+Ohne negative Zahlen klappt das. Mit negativen stürzt es ab, und zwar an einer Stelle, die harmlos aussieht. Finde die eigentliche Ursache und repariere sie.
+
+Die Heap-Prüfung ist in diesem Level aus: Wer freigegebenen Speicher liest, bekommt still das Füllmuster `0xDDDDDDDD`.
+
+Beispiel: Eingabe `4 -2 7 0` → Ausgabe `7 4`.
+
+[text.en]
+The program reads numbers until 0 into a list (new nodes at the front, as in "Chain Links"). Then it removes every node with a negative value, outputs the rest and finally frees everything.
+
+Without negative numbers this works. With negative ones it crashes, at a place that looks harmless. Find the real cause and fix it.
+
+The heap check is switched off in this level: whoever reads freed memory silently gets the fill pattern `0xDDDDDDDD`.
+
+Example: input `4 -2 7 0` → output `7 4`.
+
+[hint.de]
+Es kracht beim Lesen über einen Zeiger, der offensichtlich Unsinn ist. Die Frage ist nicht, wo es kracht, sondern woher dieser Zeiger kommt. Und: Was steht in einem Knoten, nachdem er freigegeben wurde?
+---
+Nach dem Absturz: Nimm beim Register mit dem kaputten Zeiger den Knopf, der zu seiner letzten Änderung zurückspringt. Du landest auf der Zeile, die ihn geladen hat. Was passiert direkt davor? Die Heap-Karte zeigt den Block als freigegeben.
+---
+Den Nachfolger hat das Programm vor dem Freigeben schon einmal gelesen. Wo steht er noch?
+```
+.freigeben:
+        mov r0, r6
+        sys FREE                 ; Knoten freigeben
+        ; ??? r6 = Nachfolger, ohne den freien Block zu lesen
+        jmp .pruefen
+```
+
+[hint.en]
+It crashes while reading through a pointer that is obviously nonsense. The question is not where it crashes but where that pointer comes from. And: what is in a node after it has been freed?
+---
+After the crash, take the broken pointer's register and use the button that jumps back to its last change. You land on the line that loaded it. What happened just before? The heap map shows the block as freed.
+---
+The program already read the successor once before freeing. Where is it still?
+```
+.freigeben:
+        mov r0, r6
+        sys FREE                 ; free the node
+        ; ??? r6 = successor, without reading the freed block
+        jmp .pruefen
+```
+
+[learned.de]
+Du hast einen **Zugriff nach Freigabe** gefunden (use after free). Der freigegebene Speicher ist noch da, enthält aber Müll oder, schlimmer, schon die Daten eines anderen. Hier half das Füllmuster: Ein Zeiger `0xDDDDDDDD` fällt sofort auf. In C:
+
+```c
+free(p);
+p = p->next;          // Fehler: p zeigt auf freigegebenen Speicher
+
+struct knoten *weiter = p->next;
+free(p);
+p = weiter;           // richtig
+```
+
+Der Absturz kam eine Runde später als die Ursache. **Rückwärts bis zur letzten Änderung** führt direkt vom Symptom zur Ursache.
+
+Echte Werkzeuge: Die Debug-Laufzeit von Microsofts C-Bibliothek füllt freigegebenen Speicher ebenfalls mit `0xDD`. AddressSanitizer (Clang, GCC) meldet einen Zugriff nach Freigabe sofort, so wie Stapelwerk mit eingeschalteter Heap-Prüfung.
+
+**Profi-Blick:** Use-after-free-Lücken sind ein häufiger Einstieg für Angriffe auf Browser: Gelingt es, im freigegebenen Block eigene Daten unterzubringen, folgt das Programm einem Zeiger des Angreifers.
+
+[learned.en]
+You found a **use after free**. The freed memory is still there, but it holds garbage or, worse, someone else's data already. The fill pattern helped here: a pointer `0xDDDDDDDD` stands out at once. In C:
+
+```c
+free(p);
+p = p->next;          // bug: p points to freed memory
+
+struct node *next = p->next;
+free(p);
+p = next;             // correct
+```
+
+The crash came one round later than its cause. **Back to the last change** leads straight from the symptom to the cause.
+
+Real tools: the debug runtime of Microsoft's C library also fills freed memory with `0xDD`. AddressSanitizer (Clang, GCC) reports a use after free immediately, just like Stapelwerk with the heap check switched on.
+
+**Pro view:** Use-after-free bugs are a common way into browsers for attackers: if they manage to place their own data in the freed block, the program follows a pointer chosen by the attacker.
+
+[start]
+; Nach dem Freigeben
+; Liest Zahlen bis zur 0 in eine Liste, entfernt die negativen,
+; gibt den Rest aus und gibt alles frei. Mit negativen Zahlen stürzt es ab.
+
+        mov r4, 0                ; r4 = kopf (leere Liste)
+lesen:
+        sys READ_INT
+        cmp r0, 0
+        jz aussieben
+        mov r5, r0               ; r5 = wert
+        mov r0, 8
+        sys ALLOC                ; r0 = neuer Knoten
+        st r4, [r0]              ; next = kopf
+        st r5, [r0 + 4]          ; wert
+        mov r4, r0               ; kopf = neuer Knoten
+        jmp lesen
+
+aussieben:
+        mov r5, 0                ; r5 = vorher (noch keiner)
+        mov r6, r4               ; r6 = p = kopf
+.pruefen:
+        cmp r6, 0
+        jz ausgeben
+        ld r0, [r6 + 4]          ; p->wert
+        cmp r0, 0
+        jge .behalten
+        ld r1, [r6]              ; r1 = p->next
+        cmp r5, 0
+        jz .neuer_kopf
+        st r1, [r5]              ; vorher->next = p->next
+        jmp .freigeben
+.neuer_kopf:
+        mov r4, r1               ; kopf = p->next
+.freigeben:
+        mov r0, r6
+        sys FREE                 ; Knoten freigeben
+        ld r6, [r6]              ; p = p->next
+        jmp .pruefen
+.behalten:
+        mov r5, r6               ; vorher = p
+        ld r6, [r6]              ; p = p->next
+        jmp .pruefen
+
+ausgeben:
+        cmp r4, 0
+        jz fertig
+        ld r0, [r4 + 4]
+        sys WRITE_INT
+        ld r5, [r4]              ; next merken, solange der Knoten noch gilt
+        mov r0, r4
+        sys FREE
+        mov r4, r5
+        jmp ausgeben
+fertig:
+        halt
+
+[reference]
+        mov r4, 0                ; r4 = kopf (leere Liste) ; mutate:skip (Register starten ohnehin mit 0)
+lesen:
+        sys READ_INT
+        cmp r0, 0
+        jz aussieben
+        mov r5, r0               ; r5 = wert
+        mov r0, 8
+        sys ALLOC                ; r0 = neuer Knoten
+        st r4, [r0]              ; next = kopf
+        st r5, [r0 + 4]          ; wert
+        mov r4, r0               ; kopf = neuer Knoten
+        jmp lesen
+
+aussieben:
+        mov r5, 0                ; r5 = vorher (noch keiner)
+        mov r6, r4               ; r6 = p = kopf
+.pruefen:
+        cmp r6, 0
+        jz ausgeben
+        ld r0, [r6 + 4]          ; p->wert
+        cmp r0, 0
+        jge .behalten
+        ld r1, [r6]              ; r1 = p->next
+        cmp r5, 0
+        jz .neuer_kopf
+        st r1, [r5]              ; vorher->next = p->next
+        jmp .freigeben
+.neuer_kopf:
+        mov r4, r1               ; kopf = p->next
+.freigeben:
+        mov r0, r6
+        sys FREE                 ; Knoten freigeben
+        mov r6, r1               ; repariert: p = der vorher gelesene Nachfolger
+        jmp .pruefen
+.behalten:
+        mov r5, r6               ; vorher = p
+        ld r6, [r6]              ; p = p->next
+        jmp .pruefen
+
+ausgeben:
+        cmp r4, 0
+        jz fertig
+        ld r0, [r4 + 4]
+        sys WRITE_INT
+        ld r5, [r4]              ; next merken, solange der Knoten noch gilt
+        mov r0, r4
+        sys FREE
+        mov r4, r5
+        jmp ausgeben
+fertig:
+        halt
+
+[test]
+name = ohne-negative
+in = 3 1 2 0
+out = 2 1 3
+expect_heap_empty = yes
+
+[test]
+name = beispiel
+in = 4 -2 7 0
+out = 7 4
+expect_heap_empty = yes
+
+[test]
+name = negativ-am-kopf
+in = 5 -1 0
+out = 5
+expect_heap_empty = yes
+
+[test]
+name = alle-negativ
+in = -1 -2 -3 0
+out = 
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 0
+out = 
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = -7 0
+out = 
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = 9 0
+out = 9
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 1 -1 2 -2 3 -3 0
+out = 3 2 1
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = -1 -2 5 -3 -4 0
+out = 5
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 8 9 -1 -1 -1 0
+out = 9 8
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = -2147483648 2147483647 -5 0
+out = 2147483647
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 64 -100 44 -27 16 -31 16 -46 69 -80 -38 -40 37 81 -52 -69 3 -54 100 46 43 -29 -15 -79 84 -77 -14 72 -66 -57 67 -48 83 -21 27 -54 26 52 67 25 0
+out = 25 67 52 26 27 83 67 72 84 43 46 100 3 81 37 69 16 16 44 64
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = -559 703 -117 665 980 -135 -475 571 -34 341 -7 -576 507 -513 924 -53 913 848 -843 -445 353 809 177 -383 750 -532 -675 -603 -173 352 -750 114 -83 361 -318 -904 138 -919 251 -399 336 -946 -568 -115 -772 -294 235 -301 776 -527 -91 -594 745 547 -329 -137 -633 -342 -499 -197 -566 951 160 -530 -380 925 731 -210 -286 845 -97 -787 305 -185 -87 -221 -105 -518 686 -930 961 -339 126 -105 635 207 -314 -455 675 214 -635 -929 643 -21 306 -539 744 578 167 -402 5 -394 -852 264 -387 474 -167 -532 -178 36 -283 -315 666 -786 38 696 -439 -90 -750 -414 734 557 -444 326 35 -315 -715 -753 -197 69 352 -272 -439 574 -916 -113 350 -280 -759 -924 -489 479 801 70 477 -18 -429 -316 -619 -203 0
+out = 477 70 801 479 350 574 352 69 35 326 557 734 696 38 666 36 474 264 5 167 578 744 306 643 214 675 207 635 126 961 686 305 845 731 925 160 951 547 745 776 235 336 251 138 361 114 352 750 177 809 353 848 913 924 507 341 571 980 665 703
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = -1 1 10 -4 6 -3 -3 3 -9 -6 7 -1 -5 -3 7 4 -9 -10 6 -3 -4 -3 7 1 -10 1 -7 -1 2 9 8 5 8 -8 -1 -10 3 -3 8 -5 -2 -7 8 7 6 8 -4 7 -8 4 8 5 -5 5 1 2 -4 10 -3 7 -6 -2 5 -6 1 9 -10 -9 -10 4 -3 7 2 -8 -8 -8 7 -1 -9 -7 -4 -8 -7 1 -7 4 3 -2 -4 -8 3 -10 -1 -1 -6 -8 10 1 -4 -4 7 -3 -9 10 -1 -9 5 10 -5 -7 -9 -2 -8 5 -9 -3 -7 -1 10 -7 -7 -4 -2 -9 -1 7 -6 -9 2 -9 1 5 7 -1 5 -7 9 10 -10 -6 -9 2 -8 5 6 6 5 -2 9 -2 -5 -6 -4 -3 5 4 3 -7 -9 -8 2 4 4 2 10 -8 -6 -10 -6 -8 -6 6 6 6 -7 6 8 5 2 -3 3 9 9 -4 6 -9 2 4 -5 8 9 3 -4 7 -4 8 6 -7 7 -9 -9 -1 -10 -8 -9 -6 8 5 9 9 2 -5 5 4 7 1 -6 -8 -1 -10 -4 -7 -5 1 2 7 7 3 -1 5 -4 -2 -5 -9 -6 7 -9 -8 -5 -1 -3 -10 2 4 1 -2 -10 6 -3 -4 -8 -8 -7 -6 -10 7 -5 7 -6 -1 -9 9 -8 -5 -3 -2 -7 -7 7 -6 6 -7 7 1 5 5 -2 9 9 10 8 1 2 4 -7 -1 10 -2 -10 2 -1 -2 -9 -8 -6 -8 -10 4 8 2 0
+out = 2 8 4 2 10 4 2 1 8 10 9 9 5 5 1 7 6 7 9 7 7 6 1 4 2 7 5 3 7 7 2 1 1 7 4 5 2 9 9 5 8 7 6 8 7 3 9 8 4 2 6 9 9 3 2 5 8 6 6 6 6 10 2 4 4 2 3 4 5 9 5 6 6 5 2 10 9 5 7 5 1 2 7 10 5 10 5 10 7 1 10 3 3 4 1 7 2 7 4 9 1 5 7 10 2 1 5 5 8 4 7 8 6 7 8 8 3 8 5 8 9 2 1 1 7 6 4 7 7 3 6 10 1
+expect_heap_empty = yes
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = 6 5 4 -3 -2 -1 0
+out = 4 5 6
+expect_heap_empty = yes

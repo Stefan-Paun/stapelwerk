@@ -1,0 +1,242 @@
+[level]
+id = 4-1-groesster-wert
+version = 1
+chapter = 4
+order = 1
+kind = normal
+title.de = Größter Wert
+title.en = Largest Value
+card.de = Ein Array im Speicher durchlaufen und den größten Wert finden.
+card.en = Walk through an array in memory and find the largest value.
+budget = 100000
+seed = 4101
+mobile = no
+
+[text.de]
+Diesmal kommen die Zahlen nicht aus der Eingabe, sie liegen schon im **[Speicher](handbuch:speicher)**. An der Adresse `ANZAHL` steht, wie viele Werte es sind (mindestens 1). Direkt dahinter, ab `WERTE`, folgen die Werte selbst: ein **Wort** (4 Bytes) pro Wert. So eine lückenlose Reihe heißt **Array** (Feld).
+
+Finde den größten Wert und schreib ihn an die Adresse `MAX`.
+
+Beispiel: ab `ANZAHL` steht `4  7 -2 9 3` → danach steht an `MAX` die `9`.
+
+[text.en]
+This time the numbers don't come from the input; they are already in **[memory](handbuch:speicher)**. The address `ANZAHL` holds how many values there are (at least 1). Directly behind it, starting at `WERTE`, come the values themselves: one **word** (4 bytes) per value. Such a gapless row is called an **array**.
+
+Find the largest value and write it to the address `MAX`.
+
+Example: starting at `ANZAHL` memory holds `4  7 -2 9 3` → afterwards `MAX` holds `9`.
+
+[hint.de]
+Nimm den ersten Wert als bisher größten. Geh dann die übrigen der Reihe nach durch und ersetz ihn, sobald einer größer ist. Vorsicht: Es können auch alle Werte negativ sein.
+---
+`ld r1, [ANZAHL]` lädt das Wort an einer festen Adresse. Wert Nummer i liegt bei `WERTE + i·4`: rechne `mul r4, r2, 4` und lade mit `ld r0, [r4 + WERTE]`. `st` schreibt ein Wort. Die Speicheransicht zeigt dir die Bytes.
+---
+```
+        ld r1, [ANZAHL]        ; r1 = anzahl
+        ld r3, [WERTE]         ; r3 = bisher größter Wert
+        mov r2, 1              ; r2 = i
+schleife:
+        cmp r2, r1
+        jge fertig
+        ; ??? r4 = i·4, dann r0 = Wert Nummer i
+        cmp r0, r3
+        jle weiter
+        ; ??? r0 ist der neue größte Wert
+weiter:
+        add r2, 1
+        jmp schleife
+fertig:
+        ; ??? r3 nach MAX schreiben
+        halt
+```
+
+[hint.en]
+Take the first value as the largest so far. Then go through the others one by one and replace it whenever one is larger. Careful: all values may be negative.
+---
+`ld r1, [ANZAHL]` loads the word at a fixed address. Value number i is at `WERTE + i·4`: compute `mul r4, r2, 4` and load with `ld r0, [r4 + WERTE]`. `st` stores a word. The memory view shows you the bytes.
+---
+```
+        ld r1, [ANZAHL]        ; r1 = count
+        ld r3, [WERTE]         ; r3 = largest so far
+        mov r2, 1              ; r2 = i
+schleife:
+        cmp r2, r1
+        jge fertig
+        ; ??? r4 = i·4, then r0 = value number i
+        cmp r0, r3
+        jle weiter
+        ; ??? r0 is the new largest value
+weiter:
+        add r2, 1
+        jmp schleife
+fertig:
+        ; ??? store r3 at MAX
+        halt
+```
+
+[learned.de]
+Du hast ein **Array** durchlaufen: Element i liegt bei Basis + i·4. In C:
+
+```c
+int max = werte[0];
+for (int i = 1; i < anzahl; i++)
+    if (werte[i] > max) max = werte[i];
+```
+
+Den Faktor 4 schreibt in C niemand hin. Der Compiler kennt die Größe eines `int` und rechnet den Index selbst in Bytes um.
+
+Im Speicher liegt jedes Wort **little-endian**, das niedrigste Byte zuerst: Die 9 steht dort als `09 00 00 00`. Wortzugriffe brauchen eine durch 4 teilbare Adresse.
+
+Echte Prozessoren: x86 schafft Basis + Index·4 in einem Befehl, `mov eax, [rbx + rcx*4]`, ARM ebenso mit `ldr w0, [x1, x2, lsl #2]`. Der Grundbefehlssatz von RISC-V kennt nur Basis + Konstante; dort rechnet man die Adresse vorher aus, so wie du mit `mul`.
+
+**Profi-Blick:** Eigene Variablen legst du mit `.data` an. `zaehler: .word 0` reserviert ein Wort mit Startwert 0, `puffer: .space 40` reserviert 40 Bytes voller Nullen. Genau so steht `MAX` in der Bibliothek.
+
+[learned.en]
+You walked through an **array**: element i is at base + i·4. In C:
+
+```c
+int max = values[0];
+for (int i = 1; i < count; i++)
+    if (values[i] > max) max = values[i];
+```
+
+Nobody writes the factor 4 in C. The compiler knows the size of an `int` and converts the index into bytes by itself.
+
+In memory every word is stored **little-endian**, lowest byte first: the 9 sits there as `09 00 00 00`. Word accesses need an address divisible by 4.
+
+Real processors: x86 does base + index·4 in a single instruction, `mov eax, [rbx + rcx*4]`, and so does ARM with `ldr w0, [x1, x2, lsl #2]`. The RISC-V base instruction set only knows base + constant; there you compute the address beforehand, just as you did with `mul`.
+
+**Pro view:** You create your own variables with `.data`. `zaehler: .word 0` reserves one word with the initial value 0, `puffer: .space 40` reserves 40 bytes of zeros. That is exactly how `MAX` is defined in the library.
+
+[start]
+; Größter Wert
+; ANZAHL: Anzahl der Werte, WERTE: die Werte (je ein Wort).
+; Schreib den größten Wert nach MAX.
+
+        halt
+
+[library]
+; Eingabe, von den Tests gesetzt
+.equ ANZAHL, INPUT              ; Anzahl der Werte (mindestens 1)
+.equ WERTE, INPUT + 4           ; die Werte, je ein Wort
+
+; Ergebnis
+.data
+MAX:    .word 0
+
+[reference]
+        ld r1, [ANZAHL]          ; r1 = anzahl
+        ld r3, [WERTE]           ; r3 = bisher größter Wert (werte[0])
+        mov r2, 1                ; r2 = i ; mutate:skip (Start bei 0 vergleicht werte[0] mit sich selbst, auch richtig)
+schleife:
+        cmp r2, r1               ; i < anzahl?
+        jge fertig
+        mul r4, r2, 4            ; r4 = i·4 (Abstand in Bytes)
+        ld r0, [r4 + WERTE]      ; r0 = werte[i]
+        cmp r0, r3
+        jle weiter
+        mov r3, r0               ; neuer größter Wert
+weiter:
+        add r2, 1
+        jmp schleife
+fertig:
+        st r3, [MAX]
+        halt
+
+[test]
+name = grundfall
+set ANZAHL = 4 7 -2 9 3
+expect MAX = 9
+
+[test]
+name = alle-negativ
+set ANZAHL = 3 -5 -2 -9
+expect MAX = -2
+
+[test]
+name = nur-einer
+set ANZAHL = 1 42
+expect MAX = 42
+
+[test]
+name = max-am-ende
+set ANZAHL = 5 1 2 3 4 50
+expect MAX = 50
+
+[test]
+name = verdeckt-1
+hidden = yes
+set ANZAHL = 3 5 9 1 1000
+expect MAX = 9
+
+[test]
+name = verdeckt-2
+hidden = yes
+set ANZAHL = 1 -7 99
+expect MAX = -7
+
+[test]
+name = verdeckt-3
+hidden = yes
+set ANZAHL = 4 3 3 3 3 4
+expect MAX = 3
+
+[test]
+name = verdeckt-4
+hidden = yes
+set ANZAHL = 2 -2147483648 -2147483647 0
+expect MAX = -2147483647
+
+[test]
+name = verdeckt-5
+hidden = yes
+set ANZAHL = 3 2147483647 -1 0
+expect MAX = 2147483647
+
+[test]
+name = verdeckt-6
+hidden = yes
+set ANZAHL = 3 0 -1 -2 5
+expect MAX = 0
+
+[test]
+name = verdeckt-7
+hidden = yes
+set ANZAHL = 10 100 90 80 70 60 50 40 30 20 10 1000
+expect MAX = 100
+
+[test]
+name = verdeckt-8
+hidden = yes
+set ANZAHL = 8 37791 53480 -67183 -44512 -11892 -85944 -55212 -61937 2000000
+expect MAX = 53480
+
+[test]
+name = verdeckt-9
+hidden = yes
+set ANZAHL = 15 -37789 56322 -12144 -68094 1420 -98160 28812 99252 -83684 76971 30760 43409 61948 -66754 65870 2000000
+expect MAX = 99252
+
+[test]
+name = verdeckt-10
+hidden = yes
+set ANZAHL = 30 -78729 37743 -45845 5524 1401 -49774 -43439 -69798 -45641 18644 -1130 -98908 63871 18555 -2505 2698 68683 -77525 -7901 -47539 56590 -10375 -11092 7090 57375 98730 75780 55700 -11553 -83945 2000000
+expect MAX = 98730
+
+[test]
+name = verdeckt-11
+hidden = yes
+set ANZAHL = 60 -96838 -67807 84271 -1416 -95134 -79689 -38266 -82784 -22457 -23552 -88179 -26287 -86687 75854 -59959 -99281 69012 -30736 1134 47426 -16629 99033 36367 -46967 -53739 87634 59591 -62279 -45523 13173 81342 85423 -16490 -97886 -88996 56941 -6616 2796 -9488 -68917 6690 -39873 -10514 -45561 -64336 -61300 -15229 -16180 -25716 78678 51631 -31275 -66922 -71878 -25917 -6713 34432 49948 -31335 20008 2000000
+expect MAX = 99033
+
+[test]
+name = verdeckt-12
+hidden = yes
+set ANZAHL = 100 65543 -60888 -38045 25169 43726 55710 -64002 72957 27584 5397 81458 47982 -56029 95138 -20194 82223 97387 -37975 -54051 1150 -69097 68079 30790 86608 26138 -40054 83320 -39381 53453 59648 -16079 73009 18552 -99471 -99472 -142 -75110 53940 -40183 -23589 74246 -58487 -81496 -26398 -90275 30441 -15648 44787 43574 19636 24547 58467 21109 84371 91551 1526 75533 12259 32385 -70219 80661 81421 12527 -76794 17751 -68523 63326 -21589 63233 -82269 -92164 -46181 30916 -79527 40519 44539 47628 56891 -52880 35325 90574 -74148 72943 -67291 58581 66674 -7024 16431 -41185 -34777 47471 62308 -94409 -22358 -29392 32830 -10366 6254 -2402 -24088 2000000
+expect MAX = 97387
+
+[test]
+name = verdeckt-13
+hidden = yes
+set ANZAHL = 20 -24 -3 -31 -11 -31 -18 -41 -28 -34 -44 -30 -47 -39 -41 -7 -9 -10 -3 -4 -33 7
+expect MAX = -3

@@ -1,0 +1,226 @@
+[level]
+id = 6-1-fakultaet
+version = 1
+chapter = 6
+order = 1
+kind = normal
+title.de = Fakultät
+title.en = Factorial
+card.de = Eine Funktion ruft sich selbst auf, jede mit ihrem eigenen Rahmen.
+card.en = A function calls itself, each call with its own frame.
+budget = 10000
+seed = 6101
+mobile = no
+
+[text.de]
+Schreib die Funktion `fak`: Sie bekommt n in r0 (0 ≤ n ≤ 12) und gibt n! in r0 zurück. Löse es **rekursiv**, so wie man es in Mathe definiert: 0! = 1! = 1 und n! = n · (n − 1)!.
+
+`fak` ruft sich also selbst auf. Nach diesem Aufruf brauchst du n noch, aber r0–r3 sind dann zerstört. Leg n deshalb als **lokale Variable** in einen eigenen **[Rahmen](handbuch:aufruf)** auf dem Stack.
+
+Beispiel: r0 = 5 → r0 = 120.
+
+[text.en]
+Write the function `fak`: it gets n in r0 (0 ≤ n ≤ 12) and returns n! in r0. Solve it **recursively**, the way maths defines it: 0! = 1! = 1 and n! = n · (n − 1)!.
+
+So `fak` calls itself. After that call you still need n, but r0–r3 are destroyed by then. That is why you keep n as a **local variable** in a **[frame](handbuch:aufruf)** of its own on the stack.
+
+Example: r0 = 5 → r0 = 120.
+
+[hint.de]
+Jeder Aufruf von `fak` braucht seinen eigenen Platz für n: Während fak(5) wartet, läuft fak(4) und hat ein anderes n. Genau das bietet der Stack, denn jeder Aufruf bekommt dort einen eigenen Rahmen.
+---
+Prolog: `push fp`, `mov fp, sp`, `sub sp, 4`. Jetzt ist `[fp - 4]` dein Platz für n: `st r0, [fp - 4]`, später `ld r1, [fp - 4]`. Epilog: `mov sp, fp`, `pop fp`, `ret`. Die Stack-Ansicht beschriftet jeden Rahmen.
+---
+```
+fak:
+        push fp
+        mov fp, sp
+        sub sp, 4
+        st r0, [fp - 4]          ; n sichern
+        cmp r0, 1
+        jle .basis
+        ; ??? r0 = n − 1, dann fak aufrufen
+        ; ??? n zurückholen und mit dem Ergebnis multiplizieren
+        jmp .ende
+.basis:
+        ; ??? 0! = 1! = 1
+.ende:
+        mov sp, fp
+        pop fp
+        ret
+```
+
+[hint.en]
+Every call of `fak` needs its own place for n: while fak(5) is waiting, fak(4) is running and has a different n. That is exactly what the stack offers, because every call gets its own frame there.
+---
+Prologue: `push fp`, `mov fp, sp`, `sub sp, 4`. Now `[fp - 4]` is your place for n: `st r0, [fp - 4]`, later `ld r1, [fp - 4]`. Epilogue: `mov sp, fp`, `pop fp`, `ret`. The stack view labels every frame.
+---
+```
+fak:
+        push fp
+        mov fp, sp
+        sub sp, 4
+        st r0, [fp - 4]          ; save n
+        cmp r0, 1
+        jle .basis
+        ; ??? r0 = n − 1, then call fak
+        ; ??? fetch n back and multiply it with the result
+        jmp .ende
+.basis:
+        ; ??? 0! = 1! = 1
+.ende:
+        mov sp, fp
+        pop fp
+        ret
+```
+
+[learned.de]
+Du hast einen **Stack-Rahmen** gebaut. Der Prolog sichert den alten fp und richtet einen neuen ein, der Epilog räumt alles wieder ab. So hat jeder Aufruf seine eigene lokale Variable: Bei fak(12) liegen zwölf Rahmen übereinander, jeder mit seinem n. In C:
+
+```c
+int fak(int n) {
+    if (n <= 1) return 1;
+    return n * fak(n - 1);
+}
+```
+
+Echte Prozessoren: x86-64 benutzt denselben Prolog, `push rbp`, `mov rbp, rsp`, `sub rsp, N`. ARM64 sichert fp und Rücksprungadresse mit einem einzigen Befehl, `stp x29, x30, [sp, #-16]!`. Die Kette der gesicherten fp-Werte ist das, was ein Debugger als **Backtrace** anzeigt.
+
+**Profi-Blick:** 13! = 6 227 020 800 passt nicht mehr in 32 Bit. In C wäre das ein Überlauf ohne jede Warnung, hier ebenso.
+
+[learned.en]
+You built a **stack frame**. The prologue saves the old fp and sets up a new one, the epilogue tears it all down again. That gives every call its own local variable: during fak(12), twelve frames lie on top of each other, each with its own n. In C:
+
+```c
+int fak(int n) {
+    if (n <= 1) return 1;
+    return n * fak(n - 1);
+}
+```
+
+Real processors: x86-64 uses the same prologue, `push rbp`, `mov rbp, rsp`, `sub rsp, N`. ARM64 saves fp and the return address in a single instruction, `stp x29, x30, [sp, #-16]!`. The chain of saved fp values is what a debugger shows as a **backtrace**.
+
+**Pro view:** 13! = 6 227 020 800 no longer fits into 32 bits. In C that would be an overflow without any warning, and the same happens here.
+
+[start]
+; Fakultät
+; fak: r0 = n (0 bis 12), Ergebnis n! in r0. Rekursiv lösen.
+
+fak:
+        ret
+
+[reference]
+fak:
+        push fp                  ; Prolog
+        mov fp, sp
+        sub sp, 4                ; Platz für die lokale Variable n
+        st r0, [fp - 4]          ; n sichern
+        cmp r0, 1
+        jle .basis               ; 0! = 1! = 1
+        sub r0, 1
+        call fak                 ; r0 = fak(n − 1)
+        ld r1, [fp - 4]          ; n aus dem eigenen Rahmen zurückholen
+        mul r0, r1               ; r0 = n · fak(n − 1)
+        jmp .ende
+.basis:
+        mov r0, 1
+.ende:
+        mov sp, fp               ; Epilog
+        pop fp
+        ret
+
+[test]
+name = fak-5
+call = fak
+reg r0 = 5
+expect_reg r0 = 120
+
+[test]
+name = fak-0
+call = fak
+reg r0 = 0
+expect_reg r0 = 1
+
+[test]
+name = fak-1
+call = fak
+reg r0 = 1
+expect_reg r0 = 1
+
+[test]
+name = fak-12
+call = fak
+reg r0 = 12
+expect_reg r0 = 479001600
+
+[test]
+name = verdeckt-1
+hidden = yes
+call = fak
+reg r0 = 2
+expect_reg r0 = 2
+seed = 6111
+
+[test]
+name = verdeckt-2
+hidden = yes
+call = fak
+reg r0 = 3
+expect_reg r0 = 6
+seed = 6112
+
+[test]
+name = verdeckt-3
+hidden = yes
+call = fak
+reg r0 = 4
+expect_reg r0 = 24
+seed = 6113
+
+[test]
+name = verdeckt-4
+hidden = yes
+call = fak
+reg r0 = 6
+expect_reg r0 = 720
+seed = 6114
+
+[test]
+name = verdeckt-5
+hidden = yes
+call = fak
+reg r0 = 7
+expect_reg r0 = 5040
+seed = 6115
+
+[test]
+name = verdeckt-6
+hidden = yes
+call = fak
+reg r0 = 8
+expect_reg r0 = 40320
+seed = 6116
+
+[test]
+name = verdeckt-7
+hidden = yes
+call = fak
+reg r0 = 9
+expect_reg r0 = 362880
+seed = 6117
+
+[test]
+name = verdeckt-8
+hidden = yes
+call = fak
+reg r0 = 10
+expect_reg r0 = 3628800
+seed = 6118
+
+[test]
+name = verdeckt-9
+hidden = yes
+call = fak
+reg r0 = 11
+expect_reg r0 = 39916800
+seed = 6119
