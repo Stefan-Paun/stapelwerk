@@ -53,9 +53,8 @@ Clarifications made along the way are part of the specification: see the *clarif
 
 ## Open
 
-- Images for the README: `docs/img/demo.gif`, `docs/img/workspace.png`, `docs/img/chapters.png`,
-  `docs/img/mobile.png` and the German screenshots in `docs/img/de/` do not exist yet.
 - Publishing: GitHub Pages must be enabled (Settings → Pages → Source: GitHub Actions) before the
   first push to `main`, otherwise the `pages` workflow fails at `configure-pages`. Private
   vulnerability reporting must be switched on for [SECURITY.md](../SECURITY.md).
-- Portfolio: no tile on stefanpaun.page yet.
+- Portfolio: the tile for stefanpaun.page is prepared on a separate branch of the portfolio
+  repository and goes live after this repository is published.
