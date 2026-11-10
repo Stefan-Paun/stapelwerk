@@ -41,12 +41,13 @@ Hier gibt es nichts zu programmieren, nur zuzusehen. Nach jedem Schritt ist gena
 ---
 Die Knöpfe heißen Schritt (S), Lauf (L) und Zurück (Z). Einen Haltepunkt setzt du per Klick in die schmale Spalte links neben der Zeile `auge:`; dort erscheint dann ein Punkt.
 ---
-So geht die ganze Checkliste:
+So geht die ganze Checkliste. Nach dem Zurück-Schritt hält L wieder am Haltepunkt; erst ein zweites L bringt das Programm bis `halt`:
 ```
 S                    ; ein Schritt: PC geht von 0x0100 auf 0x0104
 Klick neben auge:    ; Haltepunkt setzen
 L                    ; Lauf bis zum Haltepunkt
 Z                    ; ein Schritt zurück
+L                    ; Lauf: hält wieder am Haltepunkt
 L                    ; Lauf bis halt
 ```
 
@@ -55,12 +56,13 @@ There is nothing to program here, only something to watch. After each step, exac
 ---
 The buttons are called Step (S), Run (L) and Back (Z). To set a breakpoint, click the narrow column to the left of the line `auge:`; a dot appears there.
 ---
-This is the whole checklist:
+This is the whole checklist. After the step back, L stops at the breakpoint again; a second L takes the program to `halt`:
 ```
 S                    ; one step: the PC goes from 0x0100 to 0x0104
 click next to auge:  ; set a breakpoint
 L                    ; run to the breakpoint
 Z                    ; one step back
+L                    ; run: stops at the breakpoint again
 L                    ; run to halt
 ```
 

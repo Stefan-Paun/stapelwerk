@@ -4,8 +4,6 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
 ## [1.0.0] - 2026-11-10
 
 First public release.
@@ -24,5 +22,4 @@ First public release.
 - **Accessibility:** keyboard shortcuts for the whole debugger, live region for debugger steps, stack as a table, reduced motion and forced colours respected, changes marked by more than colour.
 - **Tests and CI:** Rust tests (including an exhaustive test over all 2³² instruction words in CI), Node tests, browser tests in headless Chrome, a differential test of native against WebAssembly, the level mutation test, CodeQL, and GitHub Pages deployment.
 
-[Unreleased]: https://github.com/Stefan-Paun/stapelwerk/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/Stefan-Paun/stapelwerk/releases/tag/v1.0.0

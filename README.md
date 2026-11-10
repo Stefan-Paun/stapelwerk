@@ -148,6 +148,7 @@ The core is about 21 000 lines of Rust including its tests. Time travel keeps sn
 - Reference solutions and hidden tests are public in this repository, and the hidden tests also ship with the published level files. Anyone can look them up.
 - On a phone, only some levels are comfortable to play (eleven are marked as phone-friendly). The workspace is built for a laptop screen.
 - Automated tests run only in Chromium (headless Chrome). Firefox and Safari are not tested automatically.
+- Level programs – starting code, labels and comments – are in German in both languages; the task texts, hints and interface are fully translated.
 - The levels and texts were written by AI agents and checked by tests and review, but not yet reviewed by teachers or tried in a classroom.
 
 ## Privacy

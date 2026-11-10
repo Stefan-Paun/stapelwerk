@@ -317,7 +317,8 @@ pub const MAX_BUDGET: u64 = 10_000_000;
 pub const MAX_FRAMES: u32 = 64;
 /// The assembler stops after this many diagnostics and adds `asm.too_many_errors`.
 pub const MAX_ASM_ERRORS: usize = 50;
-/// Maximum Levenshtein distance for "did you mean" suggestions.
+/// Maximum edit distance (Damerau-Levenshtein, optimal string alignment) for "did you mean"
+/// suggestions.
 pub const SUGGESTION_DISTANCE: usize = 2;
 
 /// Heap block alignment.

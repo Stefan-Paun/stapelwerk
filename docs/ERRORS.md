@@ -58,7 +58,7 @@ Not a fault: the program did not finish within its cycle budget (status `BUDGET_
 Each diagnostic has `{key, file, line, col, len, args}`: `file` 0 = player, 1 = level library;
 `line` and `col` are 1-based; `col` and `len` count UTF-16 code units.
 
-- `asm.unknown_mnemonic` {name, suggestion?} – `name` is not an instruction, pseudo-instruction or directive. `suggestion` is the closest known mnemonic within Levenshtein distance 2, if any.
+- `asm.unknown_mnemonic` {name, suggestion?} – `name` is not an instruction, pseudo-instruction or directive. `suggestion` is the closest known mnemonic within edit distance 2 (Damerau-Levenshtein, a swap of two neighbouring letters counts as 1), if any.
 - `asm.unknown_register` {name} – A register operand is expected but `name` is not `r0`…`r7`, `fp` or `sp`.
 - `asm.operand_count` {expected, got} – Wrong number of operands; `expected` describes the accepted forms (e.g. `"2-3"`).
 - `asm.operand_type` {expected} – An operand has the wrong kind or is missing; `expected` is `"register"`, `"immediate"`, `"memory"`, `"label"` (a jump target, also for a target that is not a multiple of 4 away, or the name of `.equ`) or `"string"` (`.string`, `.ascii`).

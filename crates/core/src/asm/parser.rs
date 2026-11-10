@@ -152,35 +152,54 @@ pub struct Line {
     pub has_error: bool,
 }
 
-/// Levenshtein distance (ASCII case ignored), stopping early above `limit`.
-pub fn levenshtein(a: &str, b: &str, limit: usize) -> usize {
+/// Damerau-Levenshtein distance in the optimal-string-alignment variant (ASCII case ignored):
+/// insertion, deletion, substitution and a swap of two neighbouring characters each cost 1.
+/// Returns `limit + 1` early when the lengths alone already differ by more than `limit`.
+pub fn edit_distance(a: &str, b: &str, limit: usize) -> usize {
     let a: Vec<u8> = a.bytes().map(|c| c.to_ascii_lowercase()).collect();
     let b: Vec<u8> = b.bytes().map(|c| c.to_ascii_lowercase()).collect();
     if a.len().abs_diff(b.len()) > limit {
         return limit + 1;
     }
+    // Three rows: i-2, i-1 and i (the transposition looks two rows back).
+    let mut prev2: Vec<usize> = vec![0; b.len() + 1];
     let mut prev: Vec<usize> = (0..=b.len()).collect();
     let mut cur = vec![0; b.len() + 1];
     for i in 1..=a.len() {
         cur[0] = i;
         for j in 1..=b.len() {
             let cost = usize::from(a[i - 1] != b[j - 1]);
-            cur[j] = (prev[j] + 1).min(cur[j - 1] + 1).min(prev[j - 1] + cost);
+            let mut d = (prev[j] + 1).min(cur[j - 1] + 1).min(prev[j - 1] + cost);
+            if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
+                d = d.min(prev2[j - 2] + 1);
+            }
+            cur[j] = d;
         }
+        std::mem::swap(&mut prev2, &mut prev);
         std::mem::swap(&mut prev, &mut cur);
     }
     prev[b.len()]
 }
 
 /// Closest known mnemonic, pseudo-instruction, condition alias or directive within
-/// [`SUGGESTION_DISTANCE`] (and strictly closer than the length of `name`). Ties go to the first
-/// candidate in table order.
+/// [`SUGGESTION_DISTANCE`] (and strictly closer than the length of `name`), measured with
+/// [`edit_distance`]. Among equally close candidates one with the same first letter wins, then one
+/// with the same length; remaining ties go to the first candidate in table order.
 pub fn suggest_mnemonic(name: &str) -> Option<&'static str> {
-    let mut best: Option<(usize, &'static str)> = None;
+    let first = name.bytes().next().map(|c| c.to_ascii_lowercase());
+    let rank = |cand: &str, d: usize| {
+        let other_first = cand.bytes().next().map(|c| c.to_ascii_lowercase()) != first;
+        let other_len = cand.len() != name.len();
+        (d, other_first, other_len)
+    };
+    let mut best: Option<((usize, bool, bool), &'static str)> = None;
     let mut consider = |cand: &'static str| {
-        let d = levenshtein(name, cand, SUGGESTION_DISTANCE);
-        if d <= SUGGESTION_DISTANCE && d < name.len() && best.is_none_or(|(bd, _)| d < bd) {
-            best = Some((d, cand));
+        let d = edit_distance(name, cand, SUGGESTION_DISTANCE);
+        if d <= SUGGESTION_DISTANCE && d < name.len() {
+            let r = rank(cand, d);
+            if best.is_none_or(|(br, _)| r < br) {
+                best = Some((r, cand));
+            }
         }
     };
     if name.starts_with('.') {
@@ -611,7 +630,21 @@ mod tests {
         assert_eq!(suggest_mnemonic("lii"), Some("li"));
         assert_eq!(suggest_mnemonic(".wrod"), Some(".word"));
         assert_eq!(suggest_mnemonic("xyzzy"), None);
-        assert_eq!(levenshtein("kitten", "sitting", 5), 3);
+        assert_eq!(edit_distance("kitten", "sitting", 5), 3);
+    }
+
+    #[test]
+    fn suggestions_with_swapped_letters() {
+        assert_eq!(suggest_mnemonic("jpm"), Some("jmp"));
+        assert_eq!(suggest_mnemonic("mvo"), Some("mov"));
+        assert_eq!(suggest_mnemonic("sbu"), Some("sub"));
+        assert_eq!(suggest_mnemonic("pussh"), Some("push"));
+        assert_eq!(suggest_mnemonic("hlat"), Some("halt"));
+        assert_eq!(edit_distance("ab", "ba", 2), 1);
+        assert_eq!(edit_distance("HLAT", "halt", 2), 1);
+        // Optimal string alignment: a swapped pair is not edited again.
+        assert_eq!(edit_distance("ca", "abc", 5), 3);
+        assert_eq!(edit_distance("abcdef", "a", 2), 3);
     }
 
     #[test]

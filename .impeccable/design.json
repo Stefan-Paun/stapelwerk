@@ -1,0 +1,1048 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T16:09:19+00:00",
+  "title": "Design System: Stapelwerk",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Drawing Sheet",
+        "canonical": "#F3F5F7",
+        "tonalRamp": [
+          "oklch(15% 0.003 247.9)",
+          "oklch(26% 0.003 247.9)",
+          "oklch(37% 0.003 247.9)",
+          "oklch(48% 0.003 247.9)",
+          "oklch(59% 0.003 247.9)",
+          "oklch(70% 0.003 247.9)",
+          "oklch(82% 0.003 247.9)",
+          "oklch(95% 0.003 247.9)"
+        ],
+        "darkTheme": "bp-paper"
+      },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Drafting Table Grey",
+        "canonical": "#E6EBF0",
+        "tonalRamp": [
+          "oklch(15% 0.009 247.9)",
+          "oklch(26% 0.009 247.9)",
+          "oklch(37% 0.009 247.9)",
+          "oklch(48% 0.009 247.9)",
+          "oklch(59% 0.009 247.9)",
+          "oklch(70% 0.009 247.9)",
+          "oklch(82% 0.009 247.9)",
+          "oklch(95% 0.009 247.9)"
+        ],
+        "darkTheme": "bp-paper-2"
+      },
+      "paper-3": {
+        "role": "neutral",
+        "displayName": "Raised Sheet",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "oklch(15% 0.0 89.9)",
+          "oklch(26% 0.0 89.9)",
+          "oklch(37% 0.0 89.9)",
+          "oklch(48% 0.0 89.9)",
+          "oklch(59% 0.0 89.9)",
+          "oklch(70% 0.0 89.9)",
+          "oklch(82% 0.0 89.9)",
+          "oklch(95% 0.0 89.9)"
+        ],
+        "darkTheme": "bp-paper-3"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Drawing Ink",
+        "canonical": "#16222E",
+        "tonalRamp": [
+          "oklch(15% 0.029 249.0)",
+          "oklch(26% 0.029 249.0)",
+          "oklch(37% 0.029 249.0)",
+          "oklch(48% 0.029 249.0)",
+          "oklch(59% 0.029 249.0)",
+          "oklch(70% 0.029 249.0)",
+          "oklch(82% 0.029 249.0)",
+          "oklch(95% 0.029 249.0)"
+        ],
+        "darkTheme": "bp-ink"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Secondary Ink",
+        "canonical": "#435160",
+        "tonalRamp": [
+          "oklch(15% 0.031 250.3)",
+          "oklch(26% 0.031 250.3)",
+          "oklch(37% 0.031 250.3)",
+          "oklch(48% 0.031 250.3)",
+          "oklch(59% 0.031 250.3)",
+          "oklch(70% 0.031 250.3)",
+          "oklch(82% 0.031 250.3)",
+          "oklch(95% 0.031 250.3)"
+        ],
+        "darkTheme": "bp-ink-2"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Tertiary Ink",
+        "canonical": "#5E6B78",
+        "tonalRamp": [
+          "oklch(15% 0.026 248.3)",
+          "oklch(26% 0.026 248.3)",
+          "oklch(37% 0.026 248.3)",
+          "oklch(48% 0.026 248.3)",
+          "oklch(59% 0.026 248.3)",
+          "oklch(70% 0.026 248.3)",
+          "oklch(82% 0.026 248.3)",
+          "oklch(95% 0.026 248.3)"
+        ],
+        "darkTheme": "bp-ink-3"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Major Rule",
+        "canonical": "#16222E",
+        "tonalRamp": [
+          "oklch(15% 0.029 249.0)",
+          "oklch(26% 0.029 249.0)",
+          "oklch(37% 0.029 249.0)",
+          "oklch(48% 0.029 249.0)",
+          "oklch(59% 0.029 249.0)",
+          "oklch(70% 0.029 249.0)",
+          "oklch(82% 0.029 249.0)",
+          "oklch(95% 0.029 249.0)"
+        ],
+        "darkTheme": "bp-rule"
+      },
+      "rule-mid": {
+        "role": "neutral",
+        "displayName": "Column Rule",
+        "canonical": "#8E9AA6",
+        "tonalRamp": [
+          "oklch(15% 0.022 248.2)",
+          "oklch(26% 0.022 248.2)",
+          "oklch(37% 0.022 248.2)",
+          "oklch(48% 0.022 248.2)",
+          "oklch(59% 0.022 248.2)",
+          "oklch(70% 0.022 248.2)",
+          "oklch(82% 0.022 248.2)",
+          "oklch(95% 0.022 248.2)"
+        ],
+        "darkTheme": "bp-rule-mid"
+      },
+      "rule-faint": {
+        "role": "neutral",
+        "displayName": "Row Hairline",
+        "canonical": "#D3DAE1",
+        "tonalRamp": [
+          "oklch(15% 0.012 248.0)",
+          "oklch(26% 0.012 248.0)",
+          "oklch(37% 0.012 248.0)",
+          "oklch(48% 0.012 248.0)",
+          "oklch(59% 0.012 248.0)",
+          "oklch(70% 0.012 248.0)",
+          "oklch(82% 0.012 248.0)",
+          "oklch(95% 0.012 248.0)"
+        ],
+        "darkTheme": "bp-rule-faint"
+      },
+      "blue": {
+        "role": "primary",
+        "displayName": "Drafting Blue",
+        "canonical": "#1D4F91",
+        "tonalRamp": [
+          "oklch(15% 0.12 256.8)",
+          "oklch(26% 0.121 256.8)",
+          "oklch(37% 0.121 256.8)",
+          "oklch(48% 0.121 256.8)",
+          "oklch(59% 0.121 256.8)",
+          "oklch(70% 0.121 256.8)",
+          "oklch(82% 0.121 256.8)",
+          "oklch(95% 0.12 256.8)"
+        ],
+        "darkTheme": "bp-blue"
+      },
+      "blue-strong": {
+        "role": "primary",
+        "displayName": "Drafting Blue Deep",
+        "canonical": "#143B6E",
+        "tonalRamp": [
+          "oklch(15% 0.099 256.6)",
+          "oklch(26% 0.099 256.6)",
+          "oklch(37% 0.099 256.6)",
+          "oklch(48% 0.099 256.6)",
+          "oklch(59% 0.099 256.6)",
+          "oklch(70% 0.099 256.6)",
+          "oklch(82% 0.099 256.6)",
+          "oklch(95% 0.099 256.6)"
+        ],
+        "darkTheme": "bp-blue-strong"
+      },
+      "blue-wash": {
+        "role": "primary",
+        "displayName": "Blue Wash",
+        "canonical": "#DCE6F3",
+        "tonalRamp": [
+          "oklch(15% 0.021 254.9)",
+          "oklch(26% 0.021 254.9)",
+          "oklch(37% 0.021 254.9)",
+          "oklch(48% 0.021 254.9)",
+          "oklch(59% 0.021 254.9)",
+          "oklch(70% 0.021 254.9)",
+          "oklch(82% 0.021 254.9)",
+          "oklch(95% 0.021 254.9)"
+        ],
+        "darkTheme": "bp-blue-wash"
+      },
+      "blue-on": {
+        "role": "primary",
+        "displayName": "On Blue",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "oklch(15% 0.0 89.9)",
+          "oklch(26% 0.0 89.9)",
+          "oklch(37% 0.0 89.9)",
+          "oklch(48% 0.0 89.9)",
+          "oklch(59% 0.0 89.9)",
+          "oklch(70% 0.0 89.9)",
+          "oklch(82% 0.0 89.9)",
+          "oklch(95% 0.0 89.9)"
+        ],
+        "darkTheme": "bp-blue-on"
+      },
+      "pencil": {
+        "role": "secondary",
+        "displayName": "Red Pencil",
+        "canonical": "#B9322A",
+        "tonalRamp": [
+          "oklch(15% 0.12 28.1)",
+          "oklch(26% 0.173 28.1)",
+          "oklch(37% 0.173 28.1)",
+          "oklch(48% 0.173 28.1)",
+          "oklch(59% 0.173 28.1)",
+          "oklch(70% 0.173 28.1)",
+          "oklch(82% 0.173 28.1)",
+          "oklch(95% 0.12 28.1)"
+        ],
+        "darkTheme": "bp-pencil"
+      },
+      "pencil-wash": {
+        "role": "secondary",
+        "displayName": "Pencil Wash",
+        "canonical": "#F7E1DE",
+        "tonalRamp": [
+          "oklch(15% 0.025 26.9)",
+          "oklch(26% 0.025 26.9)",
+          "oklch(37% 0.025 26.9)",
+          "oklch(48% 0.025 26.9)",
+          "oklch(59% 0.025 26.9)",
+          "oklch(70% 0.025 26.9)",
+          "oklch(82% 0.025 26.9)",
+          "oklch(95% 0.025 26.9)"
+        ],
+        "darkTheme": "bp-pencil-wash"
+      },
+      "stamp": {
+        "role": "secondary",
+        "displayName": "Stamp Green",
+        "canonical": "#2A714D",
+        "tonalRamp": [
+          "oklch(15% 0.092 158.1)",
+          "oklch(26% 0.092 158.1)",
+          "oklch(37% 0.092 158.1)",
+          "oklch(48% 0.092 158.1)",
+          "oklch(59% 0.092 158.1)",
+          "oklch(70% 0.092 158.1)",
+          "oklch(82% 0.092 158.1)",
+          "oklch(95% 0.092 158.1)"
+        ],
+        "darkTheme": "bp-stamp"
+      },
+      "stamp-wash": {
+        "role": "secondary",
+        "displayName": "Stamp Wash",
+        "canonical": "#DDEFE4",
+        "tonalRamp": [
+          "oklch(15% 0.024 159.1)",
+          "oklch(26% 0.024 159.1)",
+          "oklch(37% 0.024 159.1)",
+          "oklch(48% 0.024 159.1)",
+          "oklch(59% 0.024 159.1)",
+          "oklch(70% 0.024 159.1)",
+          "oklch(82% 0.024 159.1)",
+          "oklch(95% 0.024 159.1)"
+        ],
+        "darkTheme": "bp-stamp-wash"
+      },
+      "ochre": {
+        "role": "tertiary",
+        "displayName": "Ochre",
+        "canonical": "#8A5B00",
+        "tonalRamp": [
+          "oklch(15% 0.108 74.2)",
+          "oklch(26% 0.108 74.2)",
+          "oklch(37% 0.108 74.2)",
+          "oklch(48% 0.108 74.2)",
+          "oklch(59% 0.108 74.2)",
+          "oklch(70% 0.108 74.2)",
+          "oklch(82% 0.108 74.2)",
+          "oklch(95% 0.108 74.2)"
+        ],
+        "darkTheme": "bp-ochre"
+      },
+      "ochre-wash": {
+        "role": "tertiary",
+        "displayName": "Ochre Wash",
+        "canonical": "#F6ECD5",
+        "tonalRamp": [
+          "oklch(15% 0.032 87.3)",
+          "oklch(26% 0.032 87.3)",
+          "oklch(37% 0.032 87.3)",
+          "oklch(48% 0.032 87.3)",
+          "oklch(59% 0.032 87.3)",
+          "oklch(70% 0.032 87.3)",
+          "oklch(82% 0.032 87.3)",
+          "oklch(95% 0.032 87.3)"
+        ],
+        "darkTheme": "bp-ochre-wash"
+      },
+      "head-bg": {
+        "role": "primary",
+        "displayName": "Blue Field",
+        "canonical": "#1D4F91",
+        "tonalRamp": [
+          "oklch(15% 0.12 256.8)",
+          "oklch(26% 0.121 256.8)",
+          "oklch(37% 0.121 256.8)",
+          "oklch(48% 0.121 256.8)",
+          "oklch(59% 0.121 256.8)",
+          "oklch(70% 0.121 256.8)",
+          "oklch(82% 0.121 256.8)",
+          "oklch(95% 0.12 256.8)"
+        ],
+        "darkTheme": "bp-head-bg"
+      },
+      "head-ink": {
+        "role": "neutral",
+        "displayName": "Head Ink",
+        "canonical": "#F3F5F7",
+        "tonalRamp": [
+          "oklch(15% 0.003 247.9)",
+          "oklch(26% 0.003 247.9)",
+          "oklch(37% 0.003 247.9)",
+          "oklch(48% 0.003 247.9)",
+          "oklch(59% 0.003 247.9)",
+          "oklch(70% 0.003 247.9)",
+          "oklch(82% 0.003 247.9)",
+          "oklch(95% 0.003 247.9)"
+        ],
+        "darkThemeValue": "#EAF2FB"
+      },
+      "head-ink-2": {
+        "role": "neutral",
+        "displayName": "Head Ink Secondary",
+        "canonical": "#C9D8EC",
+        "tonalRamp": [
+          "oklch(15% 0.032 255.6)",
+          "oklch(26% 0.032 255.6)",
+          "oklch(37% 0.032 255.6)",
+          "oklch(48% 0.032 255.6)",
+          "oklch(59% 0.032 255.6)",
+          "oklch(70% 0.032 255.6)",
+          "oklch(82% 0.032 255.6)",
+          "oklch(95% 0.032 255.6)"
+        ],
+        "darkTheme": "bp-head-ink-2"
+      },
+      "head-rule": {
+        "role": "primary",
+        "displayName": "Head Rule",
+        "canonical": "#143B6E",
+        "tonalRamp": [
+          "oklch(15% 0.099 256.6)",
+          "oklch(26% 0.099 256.6)",
+          "oklch(37% 0.099 256.6)",
+          "oklch(48% 0.099 256.6)",
+          "oklch(59% 0.099 256.6)",
+          "oklch(70% 0.099 256.6)",
+          "oklch(82% 0.099 256.6)",
+          "oklch(95% 0.099 256.6)"
+        ],
+        "darkTheme": "bp-head-rule"
+      },
+      "seg-text": {
+        "role": "tertiary",
+        "displayName": "Segment text",
+        "canonical": "#1D4F91",
+        "tonalRamp": [
+          "oklch(15% 0.12 256.8)",
+          "oklch(26% 0.121 256.8)",
+          "oklch(37% 0.121 256.8)",
+          "oklch(48% 0.121 256.8)",
+          "oklch(59% 0.121 256.8)",
+          "oklch(70% 0.121 256.8)",
+          "oklch(82% 0.121 256.8)",
+          "oklch(95% 0.12 256.8)"
+        ],
+        "darkThemeValue": "#9CCBFF"
+      },
+      "seg-data": {
+        "role": "tertiary",
+        "displayName": "Segment data",
+        "canonical": "#2F7D55",
+        "tonalRamp": [
+          "oklch(15% 0.1 157.8)",
+          "oklch(26% 0.1 157.8)",
+          "oklch(37% 0.1 157.8)",
+          "oklch(48% 0.1 157.8)",
+          "oklch(59% 0.1 157.8)",
+          "oklch(70% 0.1 157.8)",
+          "oklch(82% 0.1 157.8)",
+          "oklch(95% 0.1 157.8)"
+        ],
+        "darkThemeValue": "#84DDAE"
+      },
+      "seg-input": {
+        "role": "tertiary",
+        "displayName": "Segment input",
+        "canonical": "#8A5B00",
+        "tonalRamp": [
+          "oklch(15% 0.108 74.2)",
+          "oklch(26% 0.108 74.2)",
+          "oklch(37% 0.108 74.2)",
+          "oklch(48% 0.108 74.2)",
+          "oklch(59% 0.108 74.2)",
+          "oklch(70% 0.108 74.2)",
+          "oklch(82% 0.108 74.2)",
+          "oklch(95% 0.108 74.2)"
+        ],
+        "darkThemeValue": "#F2C46B"
+      },
+      "seg-heap": {
+        "role": "tertiary",
+        "displayName": "Segment heap",
+        "canonical": "#7A3C8F",
+        "tonalRamp": [
+          "oklch(15% 0.12 316.8)",
+          "oklch(26% 0.142 316.8)",
+          "oklch(37% 0.142 316.8)",
+          "oklch(48% 0.142 316.8)",
+          "oklch(59% 0.142 316.8)",
+          "oklch(70% 0.142 316.8)",
+          "oklch(82% 0.142 316.8)",
+          "oklch(95% 0.12 316.8)"
+        ],
+        "darkThemeValue": "#D9A7F0"
+      },
+      "seg-stack": {
+        "role": "tertiary",
+        "displayName": "Segment stack",
+        "canonical": "#0E7489",
+        "tonalRamp": [
+          "oklch(15% 0.089 216.8)",
+          "oklch(26% 0.089 216.8)",
+          "oklch(37% 0.089 216.8)",
+          "oklch(48% 0.089 216.8)",
+          "oklch(59% 0.089 216.8)",
+          "oklch(70% 0.089 216.8)",
+          "oklch(82% 0.089 216.8)",
+          "oklch(95% 0.089 216.8)"
+        ],
+        "darkThemeValue": "#7FDDEB"
+      },
+      "seg-screen": {
+        "role": "tertiary",
+        "displayName": "Segment screen",
+        "canonical": "#16222E",
+        "tonalRamp": [
+          "oklch(15% 0.029 249.0)",
+          "oklch(26% 0.029 249.0)",
+          "oklch(37% 0.029 249.0)",
+          "oklch(48% 0.029 249.0)",
+          "oklch(59% 0.029 249.0)",
+          "oklch(70% 0.029 249.0)",
+          "oklch(82% 0.029 249.0)",
+          "oklch(95% 0.029 249.0)"
+        ],
+        "darkThemeValue": "#EAF2FB"
+      },
+      "bp-paper": {
+        "role": "neutral",
+        "displayName": "Drawing Sheet (Blaupause)",
+        "canonical": "#0F2A4A",
+        "tonalRamp": [
+          "oklch(15% 0.068 254.4)",
+          "oklch(26% 0.068 254.4)",
+          "oklch(37% 0.068 254.4)",
+          "oklch(48% 0.068 254.4)",
+          "oklch(59% 0.068 254.4)",
+          "oklch(70% 0.068 254.4)",
+          "oklch(82% 0.068 254.4)",
+          "oklch(95% 0.068 254.4)"
+        ]
+      },
+      "bp-paper-2": {
+        "role": "neutral",
+        "displayName": "Drafting Table Grey (Blaupause)",
+        "canonical": "#0B2240",
+        "tonalRamp": [
+          "oklch(15% 0.064 256.2)",
+          "oklch(26% 0.064 256.2)",
+          "oklch(37% 0.064 256.2)",
+          "oklch(48% 0.064 256.2)",
+          "oklch(59% 0.064 256.2)",
+          "oklch(70% 0.064 256.2)",
+          "oklch(82% 0.064 256.2)",
+          "oklch(95% 0.064 256.2)"
+        ]
+      },
+      "bp-paper-3": {
+        "role": "neutral",
+        "displayName": "Raised Sheet (Blaupause)",
+        "canonical": "#133259",
+        "tonalRamp": [
+          "oklch(15% 0.079 255.6)",
+          "oklch(26% 0.079 255.6)",
+          "oklch(37% 0.079 255.6)",
+          "oklch(48% 0.079 255.6)",
+          "oklch(59% 0.079 255.6)",
+          "oklch(70% 0.079 255.6)",
+          "oklch(82% 0.079 255.6)",
+          "oklch(95% 0.079 255.6)"
+        ]
+      },
+      "bp-ink": {
+        "role": "neutral",
+        "displayName": "Drawing Ink (Blaupause)",
+        "canonical": "#EAF2FB",
+        "tonalRamp": [
+          "oklch(15% 0.015 251.2)",
+          "oklch(26% 0.015 251.2)",
+          "oklch(37% 0.015 251.2)",
+          "oklch(48% 0.015 251.2)",
+          "oklch(59% 0.015 251.2)",
+          "oklch(70% 0.015 251.2)",
+          "oklch(82% 0.015 251.2)",
+          "oklch(95% 0.015 251.2)"
+        ]
+      },
+      "bp-ink-2": {
+        "role": "neutral",
+        "displayName": "Secondary Ink (Blaupause)",
+        "canonical": "#B9CDE4",
+        "tonalRamp": [
+          "oklch(15% 0.039 251.9)",
+          "oklch(26% 0.039 251.9)",
+          "oklch(37% 0.039 251.9)",
+          "oklch(48% 0.039 251.9)",
+          "oklch(59% 0.039 251.9)",
+          "oklch(70% 0.039 251.9)",
+          "oklch(82% 0.039 251.9)",
+          "oklch(95% 0.039 251.9)"
+        ]
+      },
+      "bp-ink-3": {
+        "role": "neutral",
+        "displayName": "Tertiary Ink (Blaupause)",
+        "canonical": "#93ADCB",
+        "tonalRamp": [
+          "oklch(15% 0.052 252.2)",
+          "oklch(26% 0.052 252.2)",
+          "oklch(37% 0.052 252.2)",
+          "oklch(48% 0.052 252.2)",
+          "oklch(59% 0.052 252.2)",
+          "oklch(70% 0.052 252.2)",
+          "oklch(82% 0.052 252.2)",
+          "oklch(95% 0.052 252.2)"
+        ]
+      },
+      "bp-rule": {
+        "role": "neutral",
+        "displayName": "Major Rule (Blaupause)",
+        "canonical": "#D6E4F5",
+        "tonalRamp": [
+          "oklch(15% 0.028 253.2)",
+          "oklch(26% 0.028 253.2)",
+          "oklch(37% 0.028 253.2)",
+          "oklch(48% 0.028 253.2)",
+          "oklch(59% 0.028 253.2)",
+          "oklch(70% 0.028 253.2)",
+          "oklch(82% 0.028 253.2)",
+          "oklch(95% 0.028 253.2)"
+        ]
+      },
+      "bp-rule-mid": {
+        "role": "neutral",
+        "displayName": "Column Rule (Blaupause)",
+        "canonical": "#557AA4",
+        "tonalRamp": [
+          "oklch(15% 0.078 252.3)",
+          "oklch(26% 0.078 252.3)",
+          "oklch(37% 0.078 252.3)",
+          "oklch(48% 0.078 252.3)",
+          "oklch(59% 0.078 252.3)",
+          "oklch(70% 0.078 252.3)",
+          "oklch(82% 0.078 252.3)",
+          "oklch(95% 0.078 252.3)"
+        ]
+      },
+      "bp-rule-faint": {
+        "role": "neutral",
+        "displayName": "Row Hairline (Blaupause)",
+        "canonical": "#24486F",
+        "tonalRamp": [
+          "oklch(15% 0.078 252.1)",
+          "oklch(26% 0.078 252.1)",
+          "oklch(37% 0.078 252.1)",
+          "oklch(48% 0.078 252.1)",
+          "oklch(59% 0.078 252.1)",
+          "oklch(70% 0.078 252.1)",
+          "oklch(82% 0.078 252.1)",
+          "oklch(95% 0.078 252.1)"
+        ]
+      },
+      "bp-blue": {
+        "role": "primary",
+        "displayName": "Drafting Blue (Blaupause)",
+        "canonical": "#9CCBFF",
+        "tonalRamp": [
+          "oklch(15% 0.089 251.4)",
+          "oklch(26% 0.089 251.4)",
+          "oklch(37% 0.089 251.4)",
+          "oklch(48% 0.089 251.4)",
+          "oklch(59% 0.089 251.4)",
+          "oklch(70% 0.089 251.4)",
+          "oklch(82% 0.089 251.4)",
+          "oklch(95% 0.089 251.4)"
+        ]
+      },
+      "bp-blue-strong": {
+        "role": "primary",
+        "displayName": "Drafting Blue Deep (Blaupause)",
+        "canonical": "#C6E1FF",
+        "tonalRamp": [
+          "oklch(15% 0.05 251.1)",
+          "oklch(26% 0.05 251.1)",
+          "oklch(37% 0.05 251.1)",
+          "oklch(48% 0.05 251.1)",
+          "oklch(59% 0.05 251.1)",
+          "oklch(70% 0.05 251.1)",
+          "oklch(82% 0.05 251.1)",
+          "oklch(95% 0.05 251.1)"
+        ]
+      },
+      "bp-blue-wash": {
+        "role": "primary",
+        "displayName": "Blue Wash (Blaupause)",
+        "canonical": "#1C4675",
+        "tonalRamp": [
+          "oklch(15% 0.093 253.4)",
+          "oklch(26% 0.093 253.4)",
+          "oklch(37% 0.093 253.4)",
+          "oklch(48% 0.093 253.4)",
+          "oklch(59% 0.093 253.4)",
+          "oklch(70% 0.093 253.4)",
+          "oklch(82% 0.093 253.4)",
+          "oklch(95% 0.093 253.4)"
+        ]
+      },
+      "bp-blue-on": {
+        "role": "primary",
+        "displayName": "On Blue (Blaupause)",
+        "canonical": "#0B2240",
+        "tonalRamp": [
+          "oklch(15% 0.064 256.2)",
+          "oklch(26% 0.064 256.2)",
+          "oklch(37% 0.064 256.2)",
+          "oklch(48% 0.064 256.2)",
+          "oklch(59% 0.064 256.2)",
+          "oklch(70% 0.064 256.2)",
+          "oklch(82% 0.064 256.2)",
+          "oklch(95% 0.064 256.2)"
+        ]
+      },
+      "bp-pencil": {
+        "role": "secondary",
+        "displayName": "Red Pencil (Blaupause)",
+        "canonical": "#FF958B",
+        "tonalRamp": [
+          "oklch(15% 0.12 26.2)",
+          "oklch(26% 0.129 26.2)",
+          "oklch(37% 0.129 26.2)",
+          "oklch(48% 0.129 26.2)",
+          "oklch(59% 0.129 26.2)",
+          "oklch(70% 0.129 26.2)",
+          "oklch(82% 0.129 26.2)",
+          "oklch(95% 0.12 26.2)"
+        ]
+      },
+      "bp-pencil-wash": {
+        "role": "secondary",
+        "displayName": "Pencil Wash (Blaupause)",
+        "canonical": "#4A2B45",
+        "tonalRamp": [
+          "oklch(15% 0.061 332.9)",
+          "oklch(26% 0.061 332.9)",
+          "oklch(37% 0.061 332.9)",
+          "oklch(48% 0.061 332.9)",
+          "oklch(59% 0.061 332.9)",
+          "oklch(70% 0.061 332.9)",
+          "oklch(82% 0.061 332.9)",
+          "oklch(95% 0.061 332.9)"
+        ]
+      },
+      "bp-stamp": {
+        "role": "secondary",
+        "displayName": "Stamp Green (Blaupause)",
+        "canonical": "#84DDAE",
+        "tonalRamp": [
+          "oklch(15% 0.109 159.7)",
+          "oklch(26% 0.109 159.7)",
+          "oklch(37% 0.109 159.7)",
+          "oklch(48% 0.109 159.7)",
+          "oklch(59% 0.109 159.7)",
+          "oklch(70% 0.109 159.7)",
+          "oklch(82% 0.109 159.7)",
+          "oklch(95% 0.109 159.7)"
+        ]
+      },
+      "bp-stamp-wash": {
+        "role": "secondary",
+        "displayName": "Stamp Wash (Blaupause)",
+        "canonical": "#174640",
+        "tonalRamp": [
+          "oklch(15% 0.052 183.6)",
+          "oklch(26% 0.052 183.6)",
+          "oklch(37% 0.052 183.6)",
+          "oklch(48% 0.052 183.6)",
+          "oklch(59% 0.052 183.6)",
+          "oklch(70% 0.052 183.6)",
+          "oklch(82% 0.052 183.6)",
+          "oklch(95% 0.052 183.6)"
+        ]
+      },
+      "bp-ochre": {
+        "role": "tertiary",
+        "displayName": "Ochre (Blaupause)",
+        "canonical": "#F2C46B",
+        "tonalRamp": [
+          "oklch(15% 0.12 82.4)",
+          "oklch(26% 0.12 82.4)",
+          "oklch(37% 0.12 82.4)",
+          "oklch(48% 0.12 82.4)",
+          "oklch(59% 0.12 82.4)",
+          "oklch(70% 0.12 82.4)",
+          "oklch(82% 0.12 82.4)",
+          "oklch(95% 0.12 82.4)"
+        ]
+      },
+      "bp-ochre-wash": {
+        "role": "tertiary",
+        "displayName": "Ochre Wash (Blaupause)",
+        "canonical": "#3E3A35",
+        "tonalRamp": [
+          "oklch(15% 0.01 73.6)",
+          "oklch(26% 0.01 73.6)",
+          "oklch(37% 0.01 73.6)",
+          "oklch(48% 0.01 73.6)",
+          "oklch(59% 0.01 73.6)",
+          "oklch(70% 0.01 73.6)",
+          "oklch(82% 0.01 73.6)",
+          "oklch(95% 0.01 73.6)"
+        ]
+      },
+      "bp-head-bg": {
+        "role": "primary",
+        "displayName": "Blue Field (Blaupause)",
+        "canonical": "#0A1D35",
+        "tonalRamp": [
+          "oklch(15% 0.053 255.4)",
+          "oklch(26% 0.053 255.4)",
+          "oklch(37% 0.053 255.4)",
+          "oklch(48% 0.053 255.4)",
+          "oklch(59% 0.053 255.4)",
+          "oklch(70% 0.053 255.4)",
+          "oklch(82% 0.053 255.4)",
+          "oklch(95% 0.053 255.4)"
+        ]
+      },
+      "bp-head-ink-2": {
+        "role": "neutral",
+        "displayName": "Head Ink Secondary (Blaupause)",
+        "canonical": "#A9C2DE",
+        "tonalRamp": [
+          "oklch(15% 0.048 251.4)",
+          "oklch(26% 0.048 251.4)",
+          "oklch(37% 0.048 251.4)",
+          "oklch(48% 0.048 251.4)",
+          "oklch(59% 0.048 251.4)",
+          "oklch(70% 0.048 251.4)",
+          "oklch(82% 0.048 251.4)",
+          "oklch(95% 0.048 251.4)"
+        ]
+      },
+      "bp-head-rule": {
+        "role": "primary",
+        "displayName": "Head Rule (Blaupause)",
+        "canonical": "#2A5383",
+        "tonalRamp": [
+          "oklch(15% 0.092 253.8)",
+          "oklch(26% 0.092 253.8)",
+          "oklch(37% 0.092 253.8)",
+          "oklch(48% 0.092 253.8)",
+          "oklch(59% 0.092 253.8)",
+          "oklch(70% 0.092 253.8)",
+          "oklch(82% 0.092 253.8)",
+          "oklch(95% 0.092 253.8)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles: chapter plan, About, 404. 28 px on phones."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Manual article title and TOC title."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Chapter names, result heading, dialog titles, prose h2."
+      },
+      "pane-title": {
+        "displayName": "Pane title",
+        "purpose": "Workspace pane heads (Register, Stack, Bildschirm, Programm)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Task text and prose up to 70ch; task text at line-height 1.5."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "Intro paragraph under page titles, up to 62ch, ink-2."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Tabs, chips, small buttons, tests, status, metrics."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Table heads, register group heads, legends. Sentence case, no tracking."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Editor and gutter; 13/20 px on short laptop screens; ligatures off, tab size 8."
+      },
+      "value": {
+        "displayName": "Value",
+        "purpose": "Register, stack, hexdump and step-counter values; tabular slashed-zero figures."
+      }
+    },
+    "patterns": [
+      {
+        "name": "hatch",
+        "value": "repeating-linear-gradient(135deg, var(--pencil-wash) 0 3px, transparent 3px 6px)",
+        "purpose": "Register, flag and stack values the last step changed."
+      },
+      {
+        "name": "hatch-strong",
+        "value": "repeating-linear-gradient(135deg, color-mix(in srgb, var(--pencil) 28%, transparent) 0 1.5px, transparent 1.5px 5px)",
+        "purpose": "Changed bytes in the hexdump."
+      }
+    ],
+    "strokes": [
+      {
+        "name": "w1",
+        "value": "1px",
+        "purpose": "Controls, column dividers, row hairlines."
+      },
+      {
+        "name": "w2",
+        "value": "1.5px",
+        "purpose": "Between stacked panes, frame heads, station line, nodes."
+      },
+      {
+        "name": "w3",
+        "value": "2px",
+        "purpose": "Major divisions, focus ring, sp row, stamp border."
+      },
+      {
+        "name": "w4",
+        "value": "3px",
+        "purpose": "Selected tab and current nav underline."
+      }
+    ],
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.2, 0.7, 0.2, 1)",
+        "purpose": "State transitions (button colour, switch knob)."
+      },
+      {
+        "name": "t-fast",
+        "value": "150ms",
+        "purpose": "Default duration for colour and knob transitions; 0 ms under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-hints",
+        "value": "1600px",
+        "purpose": "Below this, shortcut hints and cycle readout in the debugger bar hide."
+      },
+      {
+        "name": "tablet",
+        "value": "1199px",
+        "purpose": "Max-width: workspace goes to two columns, icon-only debugger buttons."
+      },
+      {
+        "name": "compact-height",
+        "value": "820px",
+        "purpose": "Max-height at min-width 1200px: 1366x768 and 1280x720 laptops tighten rows and code."
+      },
+      {
+        "name": "phone",
+        "value": "759px",
+        "purpose": "Max-width: tabbed single-column workspace, bottom-docked debugger bar."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single filled action per view (Assemble & test, Continue).",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 13l5 5L20 6\"/></svg>Assemblieren &amp; testen <kbd class=\"ds-kbd\">Strg ↵</kbd></button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: var(--s2, 8px); min-height: 36px; padding: 0 var(--s3, 12px); background: transparent; color: var(--ink, #16222E); border: 1px solid var(--rule-mid, #8E9AA6); border-radius: 2px; font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); font-weight: 600; font-size: 0.9375rem; line-height: 1.1; cursor: pointer; transition: background-color 150ms cubic-bezier(0.2,0.7,0.2,1), border-color 150ms cubic-bezier(0.2,0.7,0.2,1), color 150ms cubic-bezier(0.2,0.7,0.2,1); } .ds-btn-primary { background: var(--blue, #1D4F91); border-color: var(--blue, #1D4F91); color: var(--blue-on, #FFFFFF); } .ds-btn-primary:hover { background: var(--blue-strong, #143B6E); border-color: var(--blue-strong, #143B6E); } .ds-btn:focus-visible { outline: 2px solid var(--blue, #1D4F91); outline-offset: 2px; } .ds-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; stroke-linejoin: miter; } .ds-kbd { font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 0.72rem; padding: 0 0.35em; border: 1px solid color-mix(in srgb, currentColor 55%, transparent); border-bottom-width: 2px; border-radius: 2px; opacity: 0.85; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Default action: hairline at rest, raised sheet on hover, ink-filled when pressed; dashed when disabled.",
+      "html": "<button class=\"ds-btn2\">Neustart</button> <button class=\"ds-btn2\" disabled>Schritt</button>",
+      "css": ".ds-btn2 { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; background: transparent; color: var(--ink, #16222E); border: 1px solid var(--rule-mid, #8E9AA6); border-radius: 2px; font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); font-weight: 600; font-size: 0.9375rem; cursor: pointer; transition: background-color 150ms cubic-bezier(0.2,0.7,0.2,1), border-color 150ms, color 150ms; } .ds-btn2:hover { background: var(--paper-3, #FFFFFF); border-color: var(--rule, #16222E); } .ds-btn2:active { background: var(--ink, #16222E); color: var(--paper, #F3F5F7); } .ds-btn2:focus-visible { outline: 2px solid var(--blue, #1D4F91); outline-offset: 2px; } .ds-btn2:disabled { color: var(--ink-3, #5E6B78); border-style: dashed; background: transparent; cursor: default; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Low-emphasis text action in drafting blue; outline appears on hover.",
+      "html": "<button class=\"ds-btn-quiet\">Hinweis zeigen</button>",
+      "css": ".ds-btn-quiet { min-height: 36px; padding: 0 12px; background: transparent; color: var(--blue, #1D4F91); border: 1px solid transparent; border-radius: 2px; font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); font-weight: 600; font-size: 0.9375rem; cursor: pointer; transition: border-color 150ms, color 150ms; } .ds-btn-quiet:hover { border-color: var(--rule-mid, #8E9AA6); color: var(--blue-strong, #143B6E); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--blue, #1D4F91); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Console input and text fields; waiting state draws a blue inset underline.",
+      "html": "<input class=\"ds-input\" type=\"text\" value=\"10 10 14\"> <input class=\"ds-input ds-input-waiting\" type=\"text\" placeholder=\"Eingabe\">",
+      "css": ".ds-input { min-height: 32px; padding: 0 8px; background: var(--paper-3, #FFFFFF); color: var(--ink, #16222E); border: 1px solid var(--rule-mid, #8E9AA6); border-radius: 2px; font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 0.8125rem; } .ds-input:focus-visible { outline: 2px solid var(--blue, #1D4F91); outline-offset: 0; } .ds-input-waiting { border-color: var(--blue, #1D4F91); box-shadow: inset 0 -2px 0 var(--blue, #1D4F91); }"
+    },
+    {
+      "name": "App Bar",
+      "kind": "nav",
+      "refersTo": "appbar",
+      "description": "48 px drafting-blue field with wordmark and nav; current page underlined 3 px in head ink.",
+      "html": "<header class=\"ds-appbar\"><a class=\"ds-brand\" href=\"#\">Stapelwerk</a><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Kapitelplan</a><a href=\"#\">Sandkasten</a><a href=\"#\">Handbuch</a></nav></header>",
+      "css": ".ds-appbar { height: 48px; display: flex; align-items: center; gap: 24px; padding: 0 16px; background: var(--head-bg, #1D4F91); color: var(--head-ink, #F3F5F7); border-bottom: 1px solid var(--head-rule, #143B6E); font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); } .ds-brand { color: inherit; text-decoration: none; font-weight: 750; font-size: 1.125rem; } .ds-nav { display: flex; gap: 4px; height: 100%; } .ds-nav a { display: inline-flex; align-items: center; padding: 0 12px; color: var(--head-ink-2, #C9D8EC); text-decoration: none; font-weight: 550; border-top: 3px solid transparent; border-bottom: 3px solid transparent; } .ds-nav a:hover { color: var(--head-ink, #F3F5F7); } .ds-nav a[aria-current='page'] { color: var(--head-ink, #F3F5F7); border-bottom-color: var(--head-ink, #F3F5F7); } .ds-nav a:focus-visible { outline: 2px solid var(--head-ink, #F3F5F7); outline-offset: 2px; }"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Pane tabs on a faint hairline; the selected tab turns ink with a 3 px blue underline.",
+      "html": "<div class=\"ds-tablist\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Aufgabe</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Hinweise</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Tests</button></div>",
+      "css": ".ds-tablist { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--rule-faint, #D3DAE1); } .ds-tab { position: relative; min-height: 36px; padding: 0 8px; background: transparent; border: 0; color: var(--ink-2, #435160); font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); font-weight: 600; font-size: 0.8125rem; cursor: pointer; } .ds-tab:hover { color: var(--ink, #16222E); } .ds-tab[aria-selected='true'] { color: var(--ink, #16222E); } .ds-tab[aria-selected='true']::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; border-bottom: 3px solid var(--blue, #1D4F91); } .ds-tab:focus-visible { outline: 2px solid var(--blue, #1D4F91); outline-offset: -3px; }"
+    },
+    {
+      "name": "Segment Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Hexdump segment filter: colour square plus name; pressed chip gets ink outline and raised sheet.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"false\"><span class=\"ds-sw\" style=\"background:#1D4F91\"></span>text</button> <button class=\"ds-chip\" aria-pressed=\"true\"><span class=\"ds-sw\" style=\"background:#0E7489\"></span>stack</button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px; background: transparent; border: 1px solid var(--rule-faint, #D3DAE1); border-radius: 2px; color: var(--ink-2, #435160); font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); font-size: 0.8125rem; cursor: pointer; } .ds-chip:hover { border-color: var(--rule-mid, #8E9AA6); color: var(--ink, #16222E); } .ds-chip[aria-pressed='true'] { border-color: var(--ink, #16222E); color: var(--ink, #16222E); background: var(--paper-3, #FFFFFF); font-weight: 600; } .ds-chip:focus-visible { outline: 2px solid var(--blue, #1D4F91); outline-offset: 2px; } .ds-sw { width: 8px; height: 8px; display: inline-block; }"
+    },
+    {
+      "name": "Register Row (changed)",
+      "kind": "custom",
+      "refersTo": "register-row",
+      "description": "Definition-list row: a value the last step changed gets the 45-degree hatch, red underline and struck old value.",
+      "html": "<dl class=\"ds-regs\"><div class=\"ds-reg\"><dt>r2</dt><dd><span class=\"ds-hex\">000003C8</span><span class=\"ds-dec\">968</span></dd></div><div class=\"ds-reg is-changed\"><dt>r3</dt><dd><span class=\"ds-hex\">0000F000</span><s class=\"ds-old\">-4096</s><span class=\"ds-dec\">61440</span></dd></div></dl>",
+      "css": ".ds-regs { margin: 0; width: 320px; font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); color: var(--ink, #16222E); } .ds-reg { display: grid; grid-template-columns: 3ch 1fr; align-items: center; column-gap: 8px; height: 26px; border-bottom: 1px solid var(--rule-faint, #D3DAE1); } .ds-reg dt { font-weight: 600; font-size: 0.8125rem; font-family: var(--font-mono, 'IBM Plex Mono', monospace); } .ds-reg dd { margin: 0; display: flex; gap: 8px; align-items: baseline; height: 22px; padding: 0 4px; font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 0.8125rem; font-variant-numeric: tabular-nums slashed-zero; } .ds-hex { color: var(--ink-3, #5E6B78); } .ds-dec { margin-left: auto; font-weight: 500; } .ds-old { color: var(--pencil, #B9322A); font-size: 0.75rem; margin-left: auto; } .ds-reg.is-changed dd { background: repeating-linear-gradient(135deg, var(--pencil-wash, #F7E1DE) 0 3px, transparent 3px 6px); } .ds-reg.is-changed .ds-dec { margin-left: 8px; color: var(--pencil, #B9322A); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }"
+    },
+    {
+      "name": "Stamp",
+      "kind": "custom",
+      "refersTo": "result-stamp",
+      "description": "Approval stamp on a solved level: rotated, double-ruled, stamp green.",
+      "html": "<div class=\"ds-stamp\">Bestanden</div>",
+      "css": ".ds-stamp { display: inline-grid; place-items: center; padding: 6px 12px; transform: rotate(-4deg); border: 2px solid var(--stamp, #2A714D); outline: 1px solid var(--stamp, #2A714D); outline-offset: 2px; color: var(--stamp, #2A714D); font-family: var(--font-ui, 'Sofia Sans', system-ui, sans-serif); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.8125rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operable Drawing",
+    "overview": "The machine is a technical drawing you can operate. Registers, stack and memory are dimensioned parts on a drawing sheet; the debugger redraws every change. Two themes are equal citizens: \"Reißbrett\" (drawing board, light, the default) and \"Blaupause\" (blueprint, dark, by system preference or toggle). Both carry identical roles; only values change.\n\nDensity is that of a workbench: a 48 px blue app bar, a debugger bar, then three columns (38 / 25 / 37) with no outer frames. Panels are separated by line weight, not by boxes, cards or shadows. Expression lives in drafting details that do real work: dimension chains measured from the live stack layout, 45° hatching on whatever the last step changed, a timeline drawn as a ruler, coding-sheet column rules in the editor, circled chapter balloons, an approval stamp on a solved level.\n\nRejected by the build and the product brief: the hacker terminal (green on black), the IDE clone of grey boxes and drop shadows, pixel-art costume.",
+    "keyCharacteristics": [
+      "Sheet and ink neutrals; colour only where it has a job.",
+      "Hierarchy through stroke weight on a fixed ramp (1 / 1.5 / 2 / 3 px), never through containers.",
+      "Sofia Sans operates the interface; IBM Plex Mono carries code, addresses, values and counts, always with tabular, slashed-zero figures.",
+      "Changed state is marked with colour plus pattern (hatch, underline), never colour alone.",
+      "Corners stay at 2 px; circles appear only as drafting balloons, nodes and status dots."
+    ],
+    "rules": [
+      {
+        "name": "The Colour-Has-a-Job Rule",
+        "body": "Blue means \"you can act here\" or \"the machine is here\"; red pencil means error or overwritten; stamp green means passed; ochre means warning. A colour never appears decoratively or outside its job.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Filled Action Rule",
+        "body": "Per view, one action is filled blue. Everything else is a 1 px outline, quiet text, or icon button.",
+        "section": "colors"
+      },
+      {
+        "name": "The Legend Rule",
+        "body": "Coded colour (segments, heap states, screen pixels) always ships with a name, legend or inspector readout.",
+        "section": "colors"
+      },
+      {
+        "name": "The Scale-Not-Ornament Rule",
+        "body": "Hierarchy comes only from size and weight on the fixed ramp (12 / 13 / 15 / 18 / 22 / 28 / 36). No colour, tracking or caps to signal importance.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono-Means-Machine Rule",
+        "body": "IBM Plex Mono only for code, addresses, register and memory values, counts and identifiers, always `tabular-nums slashed-zero`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Line-Weight Rule",
+        "body": "Separation uses the stroke ramp: 2 px ink for major divisions (below the debugger bar, plan head, manual title), 1.5 px ink between stacked panes, frame heads and above result/learned blocks, 1 px mid between columns and around controls, 1 px faint for rows; 3 px is reserved for selection underlines. No borders around panels.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** separate panes and sections with the stroke ramp (1 / 1.5 / 2 / 3 px) and leave panels unframed.",
+      "**Do** keep exactly one filled drafting-blue action per view.",
+      "**Do** mark every change with colour plus pattern: hatch and underline for changed values, wavy underline for errors, struck-through for wrong output.",
+      "**Do** set every value, address and count in IBM Plex Mono with tabular, slashed-zero figures.",
+      "**Do** switch locked or unavailable things to dashed strokes rather than lowering opacity.",
+      "**Do** define both themes for any new token; Blaupause is a full counterpart, not an afterthought.",
+      "**Do** keep state transitions at 150 ms on `cubic-bezier(0.2, 0.7, 0.2, 1)` and drop them to 0 under reduced motion; supply forced-colours fallbacks for hatch, current line and selected tabs."
+    ],
+    "donts": [
+      "**Don't** use green-on-black terminal styling, grey IDE boxes, or pixel-art chrome.",
+      "**Don't** use drop shadows or cards for panels.",
+      "**Don't** round rectangles beyond 2 px; circles are for balloons, nodes and dots only.",
+      "**Don't** use red pencil, stamp green or ochre for anything outside error, passed and warning.",
+      "**Don't** let the screen palette leak into UI chrome, or theme the screen pixels.",
+      "**Don't** convey state by colour alone; always pair it with a name, mark or pattern."
+    ]
+  }
+}

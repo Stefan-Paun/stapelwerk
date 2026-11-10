@@ -47,11 +47,13 @@ const SHADOW_FREE = 0, SHADOW_LIVE = 1, SHADOW_FREED = 2, SHADOW_RED = 3;
 
 // ---------------------------------------------------------------- assembler
 
+// Damerau-Levenshtein (optimal string alignment), as in the core assembler.
 function levenshtein(a, b) {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
   for (let j = 1; j <= b.length; j++) d[0][j] = j;
   for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
     d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
   }
   return d[a.length][b.length];
 }
@@ -219,8 +221,11 @@ export function assemble(source, library = '', options = {}) {
         }
         if (!MNEMONICS.includes(mnemonic)) {
           let suggestion = null;
-          let best = 3;
-          for (const cand of MNEMONICS) { const d = levenshtein(mnemonic, cand); if (d < best) { best = d; suggestion = cand; } }
+          let best = [3];
+          for (const cand of MNEMONICS) {
+            const rank = [levenshtein(mnemonic, cand), cand[0] === mnemonic[0] ? 0 : 1, cand.length === mnemonic.length ? 0 : 1];
+            if (rank[0] < mnemonic.length && (rank[0] < best[0] || (rank[0] === best[0] && (rank[1] < best[1] || (rank[1] === best[1] && rank[2] < best[2]))))) { best = rank; suggestion = cand; }
+          }
           throw new AsmError('asm.unknown_mnemonic', suggestion ? { name: m[2], suggestion } : { name: m[2] }, mcol, m[2].length);
         }
         if (section !== 'text') throw new AsmError('asm.code_in_data', {}, mcol, mnemonic.length);

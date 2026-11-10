@@ -470,9 +470,11 @@ A fault does not consume cycles.
 
 Every error is `{key, file, line, col, len, args}` with file 0 = player and 1 = library; line and
 column are 1-based, and **columns count UTF-16 code units** (as the browser editor does). For an
-unknown mnemonic the assembler suggests the closest known one within Levenshtein distance 2
-(`args.suggestion`). After 50 errors it stops with `asm.too_many_errors`. All keys:
-[ERRORS.md](ERRORS.md).
+unknown mnemonic the assembler suggests the closest known one within edit distance 2
+(`args.suggestion`). The distance is Damerau-Levenshtein in the optimal-string-alignment variant, so
+swapping two neighbouring letters costs 1 (`jpm` → `jmp`); among equally close candidates one with
+the same first letter wins, then one with the same length, then table order. After 50 errors it
+stops with `asm.too_many_errors`. All keys: [ERRORS.md](ERRORS.md).
 
 ### Line map and size
 

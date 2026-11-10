@@ -148,6 +148,7 @@ Der Kern hat rund 21 000 Zeilen Rust samt Tests. Die Zeitreise hält Schnappsch�
 - Referenzlösungen und verdeckte Tests liegen offen in diesem Repository, und die verdeckten Tests stecken auch in den veröffentlichten Level-Dateien. Jeder kann sie nachschlagen.
 - Am Handy lassen sich nur manche Levels bequem spielen (elf sind als handytauglich markiert). Die Arbeitsfläche ist für einen Laptop-Bildschirm gebaut.
 - Automatisch getestet wird nur in Chromium (Headless Chrome). Firefox und Safari laufen nicht in den automatischen Tests.
+- Die Programme der Levels – Startcode, Labels und Kommentare – sind in beiden Sprachen deutsch; Aufgabentexte, Hinweise und Oberfläche sind vollständig übersetzt.
 - Levels und Texte haben KI-Agenten geschrieben; geprüft wurden sie mit Tests und Reviews, aber noch nicht von Lehrkräften begutachtet oder im Unterricht ausprobiert.
 
 ## Datenschutz
