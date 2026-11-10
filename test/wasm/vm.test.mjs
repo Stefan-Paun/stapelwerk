@@ -468,3 +468,19 @@ test('Level.image and referenceScreen', () => {
     assert.equal(s.referenceScreen(0), null, 'level 2.2 has no screen tests');
   }));
 });
+
+test('reset with a missing call label: start fault as in the test runner', () => {
+  const text = readFileSync(path.join(ROOT, 'levels', '6-1-fakultaet.lvl'), 'utf8');
+  const code = lvlSection(text, 'reference').replaceAll('fak:', 'fakultaet:').replaceAll('call fak ', 'call fakultaet ');
+  withLevel(text, (lv) => withSession(lv, (s) => {
+    assert.equal(s.assemble(code).ok, true);
+    assert.equal(s.reset(0), S.FAULT);
+    assert.equal(s.fault().key, 'fault.bad_jump_target');
+    assert.equal(s.state().testIndex, 0);
+    assert.equal(s.state().steps, 0);
+    assert.equal(s.run(), S.FAULT, 'the run cannot continue');
+    const checked = s.check();
+    assert.equal(checked.status, S.FAULT);
+    assert.equal(checked.fault.key, 'fault.bad_jump_target');
+  }));
+});

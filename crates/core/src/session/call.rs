@@ -2,8 +2,11 @@
 //! checking the callee-saved registers. Shared by the session and the test runner, so both count
 //! the same cycles and steps.
 
+use crate::fault::{Fault, FaultKind};
 use crate::isa::Reg;
+use crate::level::MemSpec;
 use crate::machine::{Machine, MachineState, RunObserver, Status};
+use crate::program::Program;
 use crate::rng::SplitMix64;
 
 use super::lines::LineCounter;
@@ -79,6 +82,67 @@ pub fn prepare_call(
         trap,
         target,
         before,
+    }
+}
+
+/// The part of a test start shared by the debugger session ([`crate::session::Session::reset`])
+/// and the test runner (`runner::prepare_test`), so both start every test in exactly the same
+/// state. Runs on a fresh `state` after `screen_init`:
+///
+/// 1. `set`/`setb` in file order (words little-endian). Symbols resolve against `program` (and the
+///    built-in constants); an unresolved address is skipped, bytes beyond 0xFFFF are cut off.
+/// 2. Function tests (`call = Some(label)`): `label` is any symbol whose value lies in 0..64 KiB;
+///    then [`prepare_call`]. Without such a symbol r4–r7 and fp still get [`call_registers`] and
+///    the `reg` lines are applied, but the run cannot start: the returned start fault
+///    `fault.bad_jump_target` (target 0, at the entry `pc`, step 0) is its result.
+/// 3. Otherwise only the `reg` lines.
+pub fn start_test(
+    state: &mut MachineState,
+    program: &Program,
+    sets: &[MemSpec],
+    regs: &[(Reg, u32)],
+    call: Option<&str>,
+    seed: u32,
+) -> (Option<CallInfo>, Option<Fault>) {
+    for set in sets {
+        let Some(addr) = set.addr.resolve(program) else {
+            continue;
+        };
+        let mem = state.mem.bytes_mut();
+        for (i, b) in set.values.to_bytes().into_iter().enumerate() {
+            if let Some(slot) = (addr as usize).checked_add(i).and_then(|a| mem.get_mut(a)) {
+                *slot = b;
+            }
+        }
+    }
+    let Some(label) = call else {
+        for &(r, v) in regs {
+            state.set_reg(r, v);
+        }
+        return (None, None);
+    };
+    let target = program
+        .symbol(label)
+        .map(|s| s.value)
+        .filter(|v| (0..0x1_0000).contains(v));
+    match target {
+        Some(t) => (
+            Some(prepare_call(state, program.trap_addr, t as u32, seed, regs)),
+            None,
+        ),
+        None => {
+            for (r, v) in [Reg::R4, Reg::R5, Reg::R6, Reg::R7, Reg::Fp]
+                .iter()
+                .zip(call_registers(seed))
+            {
+                state.set_reg(*r, v);
+            }
+            for &(r, v) in regs {
+                state.set_reg(r, v);
+            }
+            let fault = FaultKind::BadJumpTarget { target: 0 }.at(state.pc, 0);
+            (None, Some(fault))
+        }
     }
 }
 

@@ -46,7 +46,7 @@ fn not_assembled() {
     assert_eq!(s.step(1), Status::NotAssembled);
     assert_eq!(s.run(100), Status::NotAssembled);
     assert_eq!(s.goto(3), Status::NotAssembled);
-    assert_eq!(s.reset(None), Ok(Status::NotAssembled));
+    assert_eq!(s.reset(None), Status::NotAssembled);
     assert_eq!(s.view().status, 6);
     let err = s.assemble("main: frobnicate r1\n").unwrap_err();
     assert_eq!(err[0].key, "asm.unknown_mnemonic");
@@ -209,14 +209,14 @@ fn breakpoints() {
     assert_eq!(s.run(u64::MAX), Status::Halted);
 
     // After stepping onto a breakpoint, run moves on.
-    s.reset(None).unwrap();
+    s.reset(None);
     s.step(1);
     assert_eq!(s.state().pc, lp);
     assert_eq!(s.run(u64::MAX), Status::Breakpoint);
     assert_eq!(s.steps(), 4);
 
     // Time slices: a slice that ends right before the breakpoint reports it.
-    s.reset(None).unwrap();
+    s.reset(None);
     assert_eq!(s.run(0), Status::Breakpoint);
     assert_eq!(s.steps(), 1);
     let mut stops = 0;
@@ -235,7 +235,7 @@ fn breakpoints() {
     assert!(s.breakpoints().is_empty());
     s.set_breakpoint(lp, true);
     s.clear_breakpoints();
-    s.reset(None).unwrap();
+    s.reset(None);
     assert_eq!(s.run(u64::MAX), Status::Halted);
     // Breakpoints are cleared by a new assembly.
     s.set_breakpoint(lp, true);
@@ -265,7 +265,7 @@ fn line_counts_and_goto() {
         assert_eq!(&s.line_counts(), counts, "line counts at {k}");
         assert_eq!(&s.digest(), d, "digest at {k}");
     }
-    s.reset(None).unwrap();
+    s.reset(None);
     assert!(s.line_counts().is_empty());
     assert_eq!(s.hottest_line(), 0);
 }
@@ -301,7 +301,7 @@ fn frames_recursive_factorial() {
         input: vec![5],
         ..TestSetup::default()
     };
-    assert_eq!(s.reset(Some(setup)), Ok(Status::Paused));
+    assert_eq!(s.reset(Some(setup)), Status::Paused);
     assert_eq!(s.test_index(), 2);
     assert!(s.frames().is_empty(), "main has no frame");
     let base = addr(&s, "fak") + 24;
@@ -416,7 +416,7 @@ fn function_test_clean_and_clobbered() {
     let mut s = session(FUNCS);
     let trap = s.program().unwrap().trap_addr;
 
-    s.reset(Some(call_setup("good", 7))).unwrap();
+    s.reset(Some(call_setup("good", 7)));
     let info = *s.call_info().unwrap();
     assert_eq!(info.trap, trap);
     assert_eq!(s.state().pc, addr(&s, "good"));
@@ -434,15 +434,15 @@ fn function_test_clean_and_clobbered() {
     assert_eq!(s.call_clobbered(), None);
     // Same seed → same random registers; another seed → others.
     let r4 = info.before[0];
-    s.reset(Some(call_setup("good", 7))).unwrap();
+    s.reset(Some(call_setup("good", 7)));
     assert_eq!(s.state().reg(Reg::R4), r4);
-    s.reset(Some(call_setup("good", 8))).unwrap();
+    s.reset(Some(call_setup("good", 8)));
     assert_ne!(s.state().reg(Reg::R4), r4);
     // Stepping onto the trap also ends the run.
     assert_eq!(s.step(100), Status::Halted);
     assert_eq!(s.steps(), 6);
 
-    s.reset(Some(call_setup("bad", 7))).unwrap();
+    s.reset(Some(call_setup("bad", 7)));
     assert_eq!(s.run(u64::MAX), Status::Halted);
     let c = s.call_clobbered().expect("r4 clobbered");
     assert_eq!(c.reg, Reg::R4);
@@ -454,11 +454,26 @@ fn function_test_clean_and_clobbered() {
     assert_eq!(s.run(u64::MAX), Status::Halted);
     assert_eq!(s.steps(), 4);
 
-    assert_eq!(
-        s.reset(Some(call_setup("nope", 1))),
-        Err(SessionError::UnknownSymbol("nope".into()))
-    );
-    assert_eq!(s.steps(), 4, "failed reset changes nothing");
+    // A missing label is a start fault (as in the test runner), not an error.
+    assert_eq!(s.reset(Some(call_setup("nope", 1))), Status::Fault);
+    assert_eq!(s.steps(), 0);
+    assert_eq!(s.test_index(), 0);
+    assert_eq!(s.call_info(), None);
+    let f = s.fault().expect("start fault");
+    assert_eq!(f.kind, FaultKind::BadJumpTarget { target: 0 });
+    assert_eq!((f.pc, f.step), (s.state().pc, 0));
+    assert_eq!(s.state().reg(Reg::R4), call_registers(1)[0]);
+    assert_eq!(s.state().reg(Reg::R0), 2);
+    // The run cannot continue; time travel stays at the start fault.
+    assert_eq!(s.step(1), Status::Fault);
+    assert_eq!(s.run(u64::MAX), Status::Fault);
+    assert_eq!(s.goto(5), Status::Fault);
+    assert_eq!(s.steps(), 0);
+    assert_eq!(s.set_reg(1, 0), Err(SessionError::NotPaused));
+    // Any kind of symbol is accepted as the target, like in the runner (here a data label).
+    let mut d = session(&format!("{FUNCS}.data\nwert: .word 0\n"));
+    assert_eq!(d.reset(Some(call_setup("wert", 1))), Status::Paused);
+    assert_eq!(d.state().pc, addr(&d, "wert"));
 }
 
 #[test]
@@ -496,7 +511,7 @@ table:  .word 0, 0
         budget: Some(1234),
         ..TestSetup::default()
     };
-    s.reset(Some(setup.clone())).unwrap();
+    s.reset(Some(setup.clone()));
     let mem = s.memory();
     assert_eq!(
         &mem[table as usize..table as usize + 4],
@@ -531,12 +546,11 @@ table:  .word 0, 0
         }],
         ..setup
     };
-    assert_eq!(
-        s.reset(Some(bad.clone())),
-        Err(SessionError::BadAddress(0xFFFF))
-    );
+    // Bytes beyond 0xFFFF are cut off (as in the test runner).
+    assert_eq!(s.reset(Some(bad.clone())), Status::Paused);
+    assert_eq!(s.memory()[0xFFFF], 1);
 
-    // `SYMBOL + n` resolves against the program; unknown or out-of-range expressions fail.
+    // `SYMBOL + n` resolves against the program; unknown or out-of-range expressions are skipped.
     let offset = TestSetup {
         sets: vec![MemSpec {
             addr: AddrRef::Offset("table".into(), 4),
@@ -544,7 +558,7 @@ table:  .word 0, 0
         }],
         ..bad.clone()
     };
-    s.reset(Some(offset)).unwrap();
+    s.reset(Some(offset));
     assert_eq!(s.state().mem.peek_u32(table + 4), 9);
     for (name, off) in [("nope", 4), ("table", -0x10000)] {
         let wrong = TestSetup {
@@ -554,8 +568,8 @@ table:  .word 0, 0
             }],
             ..bad.clone()
         };
-        let text = AddrRef::Offset(name.into(), off).text();
-        assert_eq!(s.reset(Some(wrong)), Err(SessionError::UnknownSymbol(text)));
+        assert_eq!(s.reset(Some(wrong)), Status::Paused, "{name}");
+        assert_eq!(s.state().mem.peek_u32(table + 4), 0, "{name}");
     }
 }
 
@@ -640,8 +654,7 @@ fn buffers_stay_put() {
     s.reset(Some(TestSetup {
         input: vec![3],
         ..TestSetup::default()
-    }))
-    .unwrap();
+    }));
     s.run(u64::MAX);
     s.back(5);
     s.assemble(LOOP).unwrap();
@@ -776,7 +789,7 @@ table:  .word 0, 0
     s.load_program(program.clone());
     for i in 0..level.tests.len() {
         let mut p = runner::prepare_test(&level, &program, &level.tests[i]);
-        s.reset(Some(setup_from(&level, i))).unwrap();
+        s.reset(Some(setup_from(&level, i)));
         assert_eq!(
             s.digest_u64(),
             p.machine.state.digest(&p.machine.tapes),

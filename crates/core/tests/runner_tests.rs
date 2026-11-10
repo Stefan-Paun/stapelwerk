@@ -489,7 +489,7 @@ fn session_setup_matches_runner() {
         let setup = t.to_setup(&l, i as u32);
         assert_eq!(setup.index, i as u32);
         let mut prep = prepare_test(&l, &p, t);
-        s.reset(Some(setup)).unwrap();
+        s.reset(Some(setup));
         assert_eq!(
             s.digest_u64(),
             prep.machine.state.digest(&prep.machine.tapes),
@@ -503,4 +503,103 @@ fn session_setup_matches_runner() {
             "end {i}"
         );
     }
+}
+
+/// A function test whose label the player's code does not define (here `fakultaet:` instead of
+/// `fak:`): the debugger session starts with the same start fault as the runner, with equal
+/// status and digest, for every test of the level.
+#[test]
+fn session_missing_call_label_matches_runner() {
+    use stapelwerk_core::fault::FaultKind;
+    use stapelwerk_core::runner::{prepare_test, run_prepared};
+    use stapelwerk_core::session::{Session, SessionConfig};
+    let l = parse(include_str!("../../../levels/6-1-fakultaet.lvl")).unwrap();
+    let code = l
+        .section("reference")
+        .unwrap()
+        .replace("fak:", "fakultaet:")
+        .replace("call fak ", "call fakultaet ");
+    let p = assemble_level(&l, &code).unwrap();
+    assert!(p.symbol("fak").is_none());
+    let cfg = SessionConfig {
+        library: l.section("library").map(str::to_string),
+        seed: l.seed,
+        budget: l.budget,
+        heap_check: l.heap_check,
+        ..SessionConfig::default()
+    };
+    let mut s = Session::new(cfg);
+    s.load_program(p.clone());
+    assert!(!l.tests.is_empty());
+    for (i, t) in l.tests.iter().enumerate() {
+        assert_eq!(t.call.as_deref(), Some("fak"));
+        let mut prep = prepare_test(&l, &p, t);
+        let status = run_prepared(&mut prep);
+        assert_eq!(status, Status::Fault);
+        assert_eq!(s.reset(Some(t.to_setup(&l, i as u32))), status, "{i}");
+        assert_eq!(s.test_index(), i as i32);
+        assert_eq!(s.fault(), prep.machine.state.fault, "{i}");
+        assert_eq!(
+            s.fault().map(|f| f.kind),
+            Some(FaultKind::BadJumpTarget { target: 0 })
+        );
+        assert_eq!(
+            s.digest_u64(),
+            prep.machine.state.digest(&prep.machine.tapes),
+            "{i}"
+        );
+        // Running on changes nothing.
+        assert_eq!(s.run(u64::MAX), status);
+        assert_eq!(s.steps(), 0);
+        assert_eq!(
+            s.digest_u64(),
+            prep.machine.state.digest(&prep.machine.tapes)
+        );
+        let r = run_test(&l, &p, i as u32);
+        assert_eq!(r.status, Status::Fault);
+    }
+}
+
+/// `set` with an unresolved symbol is skipped and bytes beyond 0xFFFF are cut off, in the
+/// session exactly as in the runner.
+#[test]
+fn session_set_edge_cases_match_runner() {
+    use stapelwerk_core::level::{AddrRef, MemSpec, MemValues};
+    use stapelwerk_core::runner::{prepare_test, run_prepared};
+    use stapelwerk_core::session::{Session, SessionConfig};
+    let mut l = level("[test]\nname = t\nreg r1 = 3\n");
+    l.tests[0].sets = vec![
+        MemSpec {
+            addr: AddrRef::Symbol("NICHTDA".into()),
+            values: MemValues::Words(vec![7]),
+        },
+        MemSpec {
+            addr: AddrRef::Num(0xFFFE),
+            values: MemValues::Words(vec![0x0403_0201]),
+        },
+        MemSpec {
+            addr: AddrRef::Offset("WERT".into(), 0x10_0000),
+            values: MemValues::Words(vec![7]),
+        },
+    ];
+    let p = assemble_level(&l, "main: halt\n").unwrap();
+    let mut s = Session::new(SessionConfig {
+        library: l.section("library").map(str::to_string),
+        seed: l.seed,
+        budget: l.budget,
+        ..SessionConfig::default()
+    });
+    s.load_program(p.clone());
+    let mut prep = prepare_test(&l, &p, &l.tests[0]);
+    assert_eq!(s.reset(Some(l.tests[0].to_setup(&l, 0))), Status::Paused);
+    assert_eq!(&s.memory()[0xFFFE..], &[1, 2]);
+    assert_eq!(
+        s.digest_u64(),
+        prep.machine.state.digest(&prep.machine.tapes)
+    );
+    assert_eq!(s.run(u64::MAX), run_prepared(&mut prep));
+    assert_eq!(
+        s.digest_u64(),
+        prep.machine.state.digest(&prep.machine.tapes)
+    );
 }

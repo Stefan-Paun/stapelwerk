@@ -59,6 +59,8 @@ impl MnemonicFilter {
 /// word if there is no library), so a program that runs past its end without `halt` stops with
 /// `fault.zero_instruction`. That word has no line-map entry and does not count towards `size`.
 ///
+/// A byte order mark (U+FEFF) at the start of either source is ignored, as in the level parser.
+///
 /// Returns all diagnostics (sorted by file, line, column; at most 50 plus `asm.too_many_errors`)
 /// if there is at least one.
 pub fn assemble(
@@ -66,16 +68,21 @@ pub fn assemble(
     library: Option<&str>,
     filter: &MnemonicFilter,
 ) -> Result<Program, Vec<Diagnostic>> {
-    let (mut p_lines, mut diags) = parser::parse_file(player, FILE_PLAYER, filter);
+    let (mut p_lines, mut diags) = parser::parse_file(strip_bom(player), FILE_PLAYER, filter);
     let mut l_lines = match library {
         Some(src) => {
-            let (lines, d) = parser::parse_file(src, FILE_LIBRARY, &MnemonicFilter::All);
+            let (lines, d) = parser::parse_file(strip_bom(src), FILE_LIBRARY, &MnemonicFilter::All);
             diags.extend(d);
             lines
         }
         None => Vec::new(),
     };
     layout::assemble_lines(&mut p_lines, &mut l_lines, diags)
+}
+
+/// `src` without a leading byte order mark.
+fn strip_bom(src: &str) -> &str {
+    src.strip_prefix('\u{FEFF}').unwrap_or(src)
 }
 
 #[cfg(test)]
@@ -93,5 +100,25 @@ mod tests {
         assert!(!forbid.permits("jnz"));
         assert!(forbid.permits("add"));
         assert!(MnemonicFilter::All.permits("anything"));
+    }
+
+    #[test]
+    fn leading_bom_is_ignored() {
+        let lib = "util:   ret\n.data\nWERT:   .word 7\n";
+        let player = "main:   ld r0, [WERT]\n        call util\n        halt\n";
+        let plain = assemble(player, Some(lib), &MnemonicFilter::All).unwrap();
+        let with_bom = assemble(
+            &format!("\u{FEFF}{player}"),
+            Some(&format!("\u{FEFF}{lib}")),
+            &MnemonicFilter::All,
+        )
+        .unwrap();
+        assert_eq!(with_bom, plain);
+        // Only at the very start: the first line's columns are unchanged.
+        let err =
+            assemble("\u{FEFF}main: frobnicate r1\n", None, &MnemonicFilter::All).unwrap_err();
+        let ok = assemble("main: frobnicate r1\n", None, &MnemonicFilter::All).unwrap_err();
+        assert_eq!(err, ok);
+        assert_eq!((err[0].line, err[0].col), (1, 7));
     }
 }

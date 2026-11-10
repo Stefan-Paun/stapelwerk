@@ -349,9 +349,14 @@ These describe the behaviour of `crates/wasm` where the sections above leave roo
 5. `sess_assemble` returns `0xFFFFFFFF` for an invalid handle or buffer (the output buffer then
    holds the error object). On success the session is reset for an interactive run (test −1, input
    open) and its breakpoints are cleared; on failure the old program is dropped.
-6. `sess_reset` returns `0xFFFFFFFF` for a test index ≥ the number of tests, < −1, ≥ 0 in a sandbox
-   session, and when the test cannot be set up (a `set`/`call` symbol the program does not define,
-   a `set` beyond 0xFFFF); the session is then unchanged. Without a program it returns 6.
+6. `sess_reset` returns `0xFFFFFFFF` for a test index ≥ the number of tests, < −1 or ≥ 0 in a
+   sandbox session; the session is then unchanged. Without a program it returns 6. Otherwise the
+   test starts exactly as in `sess_run_tests` (shared code with the test runner): a `set`/`setb`
+   whose address does not resolve is skipped, bytes beyond 0xFFFF are cut off, and a `call` label
+   may be any symbol with a value below 0x10000. If the program does not define the `call` label,
+   the reset still succeeds and returns 2 (FAULT): the test index is set, `sess_fault` reports the
+   start fault `fault.bad_jump_target` (target 0, the entry `pc`, step 0), and the run cannot
+   continue — the same status and digest as the test's entry in `sess_run_tests`.
 7. `sess_set_reg` returns `0xFFFFFFFF` for `reg > 11` and when the run is over (HALTED, FAULT,
    BUDGET_EXCEEDED); `sess_back_to_change` for `kind > 2`, a register index above 11, a word address that is not 4-aligned or
    above 0xFFFC, or a byte address above 0xFFFF; `sess_bp` for `on > 1`.

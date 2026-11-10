@@ -417,7 +417,7 @@ pub extern "C" fn sess_reset(s: u32, test: i32) -> u32 {
             };
             Some(t.to_setup(&lv.level, i))
         };
-        status_of(x.session.reset(setup))
+        x.session.reset(setup).code()
     })
 }
 

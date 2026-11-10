@@ -30,7 +30,9 @@ mod call;
 mod inspect;
 mod lines;
 
-pub use call::{CALLEE_SAVED, CallInfo, Clobbered, call_registers, prepare_call, run_to_end};
+pub use call::{
+    CALLEE_SAVED, CallInfo, Clobbered, call_registers, prepare_call, run_to_end, start_test,
+};
 pub use inspect::{Frame, HeapBlockInfo, StateView, frame_chain, heap_blocks};
 pub use lines::LineCounter;
 
@@ -44,9 +46,9 @@ use crate::disasm::{DisasmLine, disasm_range};
 use crate::fault::Fault;
 use crate::heap::HeapCheck;
 use crate::isa::Reg;
-use crate::level::{AddrRef, MemSpec, MemValues};
+use crate::level::MemSpec;
 use crate::machine::{Machine, MachineConfig, MachineState, RunObserver, Status, Tapes};
-use crate::program::{LineEntry, Program, Symbol, SymbolKind};
+use crate::program::{LineEntry, Program, Symbol};
 
 /// `kind` argument of `back_to_change`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -118,11 +120,12 @@ impl SessionConfig {
 /// fresh machine:
 ///
 /// 1. `screen` (`screen_init`), 2. `sets` (`set`/`setb`; words little-endian, symbols resolved
-///    against the assembled program), 3. function tests only: random r4–r7 and fp, 4. `regs`
-///    (`reg rX = v`), 5. function tests only: push `__trap`, `pc = LABEL` (see [`prepare_call`]).
+///    against the assembled program, unresolved ones skipped), 3. function tests only: random
+///    r4–r7 and fp, 4. `regs` (`reg rX = v`), 5. function tests only: push `__trap`,
+///    `pc = LABEL` (see [`prepare_call`]); a missing label gives a start fault instead.
 ///
-/// This is the same order as `runner::prepare_test`, so a test reset in the debugger starts in
-/// exactly the state `run_tests` uses.
+/// Steps 2–5 are [`start_test`], shared with `runner::prepare_test`, so a test reset in the
+/// debugger starts in exactly the state `run_tests` uses.
 ///
 /// The input tapes get `input` (`in`) and `in_text` (`in_text`) and are closed (test mode).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -154,10 +157,6 @@ pub enum SessionError {
     BadArg,
     /// `set_reg` while the run is over (HALTED, FAULT, BUDGET_EXCEEDED).
     NotPaused,
-    /// A test refers to a symbol the program does not define (or `call` to a non-code symbol).
-    UnknownSymbol(String),
-    /// A `set`/`setb` would write beyond 0xFFFF.
-    BadAddress(u32),
 }
 
 #[derive(Clone, Debug)]
@@ -309,8 +308,7 @@ impl Session {
         self.lines = LineCounter::new(&program);
         self.program = Some(program);
         self.breakpoints.clear();
-        // Cannot fail: no setup to resolve.
-        let _ = self.reset(None);
+        self.reset(None);
     }
 
     fn unload(&mut self) {
@@ -327,10 +325,13 @@ impl Session {
 
     /// Fresh machine for a test (`Some`) or an interactive run (`None`: open, empty input,
     /// level seed and budget). Clears snapshots, edits and line counters; breakpoints stay.
-    /// On error nothing changes.
-    pub fn reset(&mut self, setup: Option<TestSetup>) -> Result<Status, SessionError> {
+    ///
+    /// A test always starts exactly as in `runner::prepare_test` (see [`start_test`]): unresolved
+    /// `set` addresses are skipped, bytes beyond 0xFFFF cut off, and a `call` label the program
+    /// does not define gives a start fault (status FAULT, `fault.bad_jump_target`, step 0).
+    pub fn reset(&mut self, setup: Option<TestSetup>) -> Status {
         let Some(program) = &self.program else {
-            return Ok(Status::NotAssembled);
+            return Status::NotAssembled;
         };
         let interactive = setup.is_none();
         let setup = setup.unwrap_or_default();
@@ -351,31 +352,19 @@ impl Session {
                 dst.copy_from_slice(src);
             }
         }
-        for spec in &setup.sets {
-            apply_set(&mut fresh, program, spec)?;
+        let (call, start_fault) = start_test(
+            &mut fresh,
+            program,
+            &setup.sets,
+            &setup.regs,
+            setup.call.as_deref(),
+            cfg.seed,
+        );
+        if let Some(f) = start_fault {
+            // Same result as `runner::run_prepared`: the run is over before its first step.
+            fresh.status = Status::Fault;
+            fresh.fault = Some(f);
         }
-        let call = match &setup.call {
-            Some(label) => {
-                let target = program
-                    .symbol(label)
-                    .filter(|s| s.kind == SymbolKind::Code)
-                    .ok_or_else(|| SessionError::UnknownSymbol(label.clone()))?
-                    .value as u32;
-                Some(prepare_call(
-                    &mut fresh,
-                    program.trap_addr,
-                    target,
-                    cfg.seed,
-                    &setup.regs,
-                ))
-            }
-            None => {
-                for &(r, v) in &setup.regs {
-                    fresh.set_reg(r, v);
-                }
-                None
-            }
-        };
 
         let m = &mut self.machine;
         m.state.restore_from(&fresh);
@@ -399,7 +388,7 @@ impl Session {
         self.interval = SNAPSHOT_INTERVAL;
         self.thinned = 0;
         self.arrive();
-        Ok(self.status())
+        self.status()
     }
 
     // -----------------------------------------------------------------------------------------
@@ -886,30 +875,4 @@ impl Session {
     pub fn thin_count(&self) -> u32 {
         self.thinned
     }
-}
-
-/// Writes one `set`/`setb` into a fresh state.
-fn apply_set(
-    state: &mut MachineState,
-    program: &Program,
-    spec: &MemSpec,
-) -> Result<(), SessionError> {
-    let addr = match &spec.addr {
-        AddrRef::Num(a) => *a,
-        other => other
-            .resolve(program)
-            .ok_or_else(|| SessionError::UnknownSymbol(other.text()))?,
-    };
-    let bytes: Vec<u8> = match &spec.values {
-        MemValues::Words(w) => w.iter().flat_map(|x| x.to_le_bytes()).collect(),
-        MemValues::Bytes(b) => b.clone(),
-    };
-    let start = addr as usize;
-    let dst = state
-        .mem
-        .bytes_mut()
-        .get_mut(start..start.saturating_add(bytes.len()))
-        .ok_or(SessionError::BadAddress(addr))?;
-    dst.copy_from_slice(&bytes);
-    Ok(())
 }

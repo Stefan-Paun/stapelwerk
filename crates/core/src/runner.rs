@@ -13,16 +13,14 @@
 use crate::asm::{MnemonicFilter, assemble};
 use crate::consts::{OUT_KIND_BYTE, OUT_KIND_INT, SCREEN_BYTES, SCREEN_START, SCREEN_W};
 use crate::diag::{Arg, Args, Diagnostic, FILE_PLAYER, write_args};
-use crate::fault::{Fault, FaultKind};
+use crate::fault::Fault;
 use crate::isa::Reg;
 use crate::json::JsonWriter;
 use crate::level::pack::{pack_source, ref_image_name};
 use crate::level::{AddrRef, Level, MemValues, ScreenExpect, TestCase};
 use crate::machine::{Machine, MachineConfig, Status};
 use crate::program::Program;
-use crate::session::{
-    CALLEE_SAVED, CallInfo, LineCounter, call_registers, prepare_call, run_to_end,
-};
+use crate::session::{CALLEE_SAVED, CallInfo, LineCounter, call_registers, run_to_end, start_test};
 
 /// Why a test that ran to completion did not pass (`check.*` key).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -176,52 +174,16 @@ pub fn prepare_test(level: &Level, program: &Program, test: &TestCase) -> Prepar
     if let Some(img) = test.screen_init.as_deref().and_then(|n| level.image(n)) {
         write_bytes(&mut m, SCREEN_START, &img.pixels);
     }
-    for set in &test.sets {
-        if let Some(addr) = resolve_addr(program, &set.addr) {
-            write_bytes(&mut m, addr, &set.values.to_bytes());
-        }
-    }
-    let mut call = None;
-    let mut start_fault = None;
-    match &test.call {
-        // Order (shared with the session): screen, sets, random callee-saved registers, `reg`
-        // lines, push `__trap`, `pc = LABEL`.
-        Some(label) => {
-            let target = program
-                .symbol(label)
-                .map(|s| s.value)
-                .filter(|v| (0..0x1_0000).contains(v));
-            match target {
-                Some(t) => {
-                    call = Some(prepare_call(
-                        &mut m.state,
-                        program.trap_addr,
-                        t as u32,
-                        seed,
-                        &test.regs,
-                    ));
-                }
-                None => {
-                    for (r, v) in [Reg::R4, Reg::R5, Reg::R6, Reg::R7, Reg::Fp]
-                        .iter()
-                        .zip(call_registers(seed))
-                    {
-                        m.state.set_reg(*r, v);
-                    }
-                    for &(r, v) in &test.regs {
-                        m.state.set_reg(r, v);
-                    }
-                    let f = FaultKind::BadJumpTarget { target: 0 }.at(m.state.pc, 0);
-                    start_fault = Some(f);
-                }
-            }
-        }
-        None => {
-            for &(r, v) in &test.regs {
-                m.state.set_reg(r, v);
-            }
-        }
-    }
+    // Order (shared with the session): screen, sets, random callee-saved registers, `reg`
+    // lines, push `__trap`, `pc = LABEL`.
+    let (call, start_fault) = start_test(
+        &mut m.state,
+        program,
+        &test.sets,
+        &test.regs,
+        test.call.as_deref(),
+        seed,
+    );
     PreparedTest {
         machine: m,
         call,
