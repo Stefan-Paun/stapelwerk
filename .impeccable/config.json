@@ -1,0 +1,15 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": ["web/index.html", "web/css/app.css", "web/css/tokens.css"],
+        "createdAt": "2026-11-10T12:00:00.000Z",
+        "reason": "Direction contract Reißbrett: 45° hatching marks bytes/registers a step changed (state, not decoration), and the timeline track is a ruler with tick marks; both are drawing conventions pinned by the brief."
+      }
+    ]
+  }
+}

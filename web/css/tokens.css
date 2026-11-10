@@ -1,0 +1,196 @@
+/* Stapelwerk design tokens: "Reißbrett" (drawing board, light) and
+   "Blaupause" (blueprint, dark). Colours carry jobs: blue = action and the
+   machine's current position, red pencil = error and overwritten, stamp
+   green = passed. Contrast of every text token was checked against its
+   ground (AA, see test/unit/contrast.test.mjs). */
+
+@font-face {
+  font-family: 'Sofia Sans';
+  src: url('../fonts/SofiaSans-wght.woff2') format('woff2');
+  font-weight: 1 1000;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  src: url('../fonts/SofiaSans-Italic-wght.woff2') format('woff2');
+  font-weight: 1 1000;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../fonts/IBMPlexMono-Regular-Latin1.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../fonts/IBMPlexMono-Italic-Latin1.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../fonts/IBMPlexMono-Medium-Latin1.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../fonts/IBMPlexMono-SemiBold-Latin1.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Sheet and ink */
+  --paper: #F3F5F7;
+  --paper-2: #E6EBF0;
+  --paper-3: #FFFFFF;
+  --ink: #16222E;
+  --ink-2: #435160;
+  --ink-3: #5E6B78;
+  --rule: #16222E;
+  --rule-mid: #8E9AA6;
+  --rule-faint: #D3DAE1;
+
+  /* Jobs */
+  --blue: #1D4F91;
+  --blue-strong: #143B6E;
+  --blue-wash: #DCE6F3;
+  --blue-on: #FFFFFF;
+  --pencil: #B9322A;
+  --pencil-wash: #F7E1DE;
+  --stamp: #2A714D;
+  --stamp-wash: #DDEFE4;
+  --ochre: #8A5B00;
+  --ochre-wash: #F6ECD5;
+
+  /* Shell */
+  --head-bg: #1D4F91;
+  --head-ink: #F3F5F7;
+  --head-ink-2: #C9D8EC;
+  --head-rule: #143B6E;
+
+  /* Memory segments: coded colour, always shown with the segment name */
+  --seg-text: #1D4F91;
+  --seg-data: #2F7D55;
+  --seg-input: #8A5B00;
+  --seg-heap: #7A3C8F;
+  --seg-stack: #0E7489;
+  --seg-screen: #16222E;
+
+  /* Patterns */
+  --hatch: repeating-linear-gradient(135deg, var(--pencil-wash) 0 3px, transparent 3px 6px);
+  --hatch-strong: repeating-linear-gradient(135deg, color-mix(in srgb, var(--pencil) 28%, transparent) 0 1.5px, transparent 1.5px 5px);
+
+  /* Type */
+  --font-ui: 'Sofia Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --fs-xs: 0.75rem;   /* 12 */
+  --fs-s: 0.8125rem;  /* 13 */
+  --fs-m: 0.9375rem;  /* 15 */
+  --fs-l: 1.125rem;   /* 18 */
+  --fs-xl: 1.375rem;  /* 22 */
+  --fs-2xl: 1.75rem;  /* 28 */
+  --fs-3xl: 2.25rem;  /* 36 */
+  --fs-code: 0.875rem; /* 14 */
+  --lh-code: 1.375rem; /* 22 */
+
+  /* Space (4 px grid) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+
+  /* Line weights instead of boxes */
+  --w1: 1px;
+  --w2: 1.5px;
+  --w3: 2px;
+  --w4: 3px;
+  --radius: 2px;
+
+  --appbar-h: 48px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 150ms;
+  --t-mid: 200ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --paper: #0F2A4A;
+    --paper-2: #0B2240;
+    --paper-3: #133259;
+    --ink: #EAF2FB;
+    --ink-2: #B9CDE4;
+    --ink-3: #93ADCB;
+    --rule: #D6E4F5;
+    --rule-mid: #557AA4;
+    --rule-faint: #24486F;
+    --blue: #9CCBFF;
+    --blue-strong: #C6E1FF;
+    --blue-wash: #1C4675;
+    --blue-on: #0B2240;
+    --pencil: #FF958B;
+    --pencil-wash: #4A2B45;
+    --stamp: #84DDAE;
+    --stamp-wash: #174640;
+    --ochre: #F2C46B;
+    --ochre-wash: #3E3A35;
+    --head-bg: #0A1D35;
+    --head-ink: #EAF2FB;
+    --head-ink-2: #A9C2DE;
+    --head-rule: #2A5383;
+    --seg-text: #9CCBFF;
+    --seg-data: #84DDAE;
+    --seg-input: #F2C46B;
+    --seg-heap: #D9A7F0;
+    --seg-stack: #7FDDEB;
+    --seg-screen: #EAF2FB;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #0F2A4A;
+  --paper-2: #0B2240;
+  --paper-3: #133259;
+  --ink: #EAF2FB;
+  --ink-2: #B9CDE4;
+  --ink-3: #93ADCB;
+  --rule: #D6E4F5;
+  --rule-mid: #557AA4;
+  --rule-faint: #24486F;
+  --blue: #9CCBFF;
+  --blue-strong: #C6E1FF;
+  --blue-wash: #1C4675;
+  --blue-on: #0B2240;
+  --pencil: #FF958B;
+  --pencil-wash: #4A2B45;
+  --stamp: #84DDAE;
+  --stamp-wash: #174640;
+  --ochre: #F2C46B;
+  --ochre-wash: #3E3A35;
+  --head-bg: #0A1D35;
+  --head-ink: #EAF2FB;
+  --head-ink-2: #A9C2DE;
+  --head-rule: #2A5383;
+  --seg-text: #9CCBFF;
+  --seg-data: #84DDAE;
+  --seg-input: #F2C46B;
+  --seg-heap: #D9A7F0;
+  --seg-stack: #7FDDEB;
+  --seg-screen: #EAF2FB;
+}

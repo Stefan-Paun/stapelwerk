@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Stapelwerk · Assembler-Rätsel auf einer eigenen CPU</title>
+<meta name="description" content="Lernspiel im Browser: Assembler-Rätsel auf einer selbst entworfenen 32-Bit-Lehr-CPU, mit Debugger und Zeitreise. Kein Konto, keine Daten, offline.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1D4F91">
+<link rel="canonical" href="https://stefanpaun.page/stapelwerk/">
+<link rel="alternate" hreflang="de" href="https://stefanpaun.page/stapelwerk/">
+<link rel="alternate" hreflang="en" href="https://stefanpaun.page/stapelwerk/en/">
+<link rel="alternate" hreflang="x-default" href="https://stefanpaun.page/stapelwerk/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Stapelwerk">
+<meta property="og:title" content="Stapelwerk · Assembler-Rätsel auf einer eigenen CPU">
+<meta property="og:description" content="30 Levels von Registern bis zum Heap, mit Debugger und Zeitreise. Kein Konto, keine Daten, offline.">
+<meta property="og:url" content="https://stefanpaun.page/stapelwerk/">
+<meta property="og:image" content="https://stefanpaun.page/stapelwerk/og.png">
+<meta property="og:locale" content="de_AT">
+<meta property="og:locale:alternate" content="en_GB">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="fonts/SofiaSans-wght.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/IBMPlexMono-Regular-Latin1.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt</a>
+<header class="appbar">
+  <a class="brand" href="#/">Stapelwerk</a>
+  <nav class="mainnav" aria-label="Hauptnavigation">
+    <a href="#/" data-route="home">Kapitelplan</a>
+    <a href="#/sandbox" data-route="sandbox">Sandkasten</a>
+    <a href="#/manual" data-route="manual">Handbuch</a>
+    <a href="#/about" data-route="about">Über</a>
+  </nav>
+  <div class="appbar-tools">
+    <a class="lang-link" href="en/" hreflang="en" lang="en">English</a>
+    <button class="icon-btn help-toggle" type="button" aria-label="Tastenkürzel"></button>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Thema wechseln"></button>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+  <noscript><p class="page">Stapelwerk braucht JavaScript: die Maschine läuft als WebAssembly in deinem Browser. Es werden keine Daten gesendet.</p></noscript>
+</main>
+<div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

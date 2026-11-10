@@ -1,0 +1,14 @@
+{
+  "name": "Stapelwerk",
+  "short_name": "Stapelwerk",
+  "description": "Assembler-Rätsel auf einer selbst entworfenen 32-Bit-CPU.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F5F7",
+  "theme_color": "#1D4F91",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
