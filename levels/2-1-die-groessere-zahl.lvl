@@ -1,0 +1,192 @@
+[level]
+id = 2-1-die-groessere-zahl
+version = 1
+chapter = 2
+order = 1
+kind = normal
+title.de = Die größere Zahl
+title.en = The Larger One
+card.de = Vergleichen und springen: Der Prozessor trifft seine erste Entscheidung.
+card.en = Compare and jump: the processor makes its first decision.
+budget = 100000
+seed = 2102
+mobile = yes
+
+[text.de]
+Lies zwei Zahlen a und b und gib die größere aus. Sind beide gleich, gib diese Zahl aus.
+
+Jetzt muss das Programm sich entscheiden. `cmp r1, r0` rechnet r1 − r0, wirft das Ergebnis weg und setzt nur die [Flags](handbuch:flags): Z (null), N (negativ), V (Überlauf). Ein bedingter **Sprung** wie `jgt ziel` liest sie und springt zum **Label** `ziel:`, wenn r1 > r0 war. Sonst geht es mit der nächsten Zeile weiter.
+
+Beispiel: Eingabe `3 7` → Ausgabe `7`.
+
+[text.en]
+Read two numbers a and b and print the larger one. If they are equal, print that number.
+
+Now the program has to make a decision. `cmp r1, r0` computes r1 − r0, throws the result away and only sets the [flags](handbuch:flags): Z (zero), N (negative), V (overflow). A conditional **jump** such as `jgt ziel` reads them and jumps to the **label** `ziel:` if r1 > r0. Otherwise execution continues with the next line.
+
+Example: input `3 7` → output `7`.
+
+[hint.de]
+Leg eine der beiden Zahlen schon als Ergebnis bereit. Nur wenn die andere größer ist, nimmst du stattdessen sie. Ein einziger Vergleich reicht.
+---
+Nach `cmp a, b` springt `jgt` bei a > b, `jge` bei a ≥ b, `jlt` bei a < b und `jle` bei a ≤ b; `jmp` springt immer. Setz einen Haltepunkt auf den Sprung und schau auf die Flags.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = a
+        sys  READ_INT          ; r0 = b
+        cmp  r1, r0            ; a - b, nur Flags
+        ; ??? springe zu ausgabe, wenn a ≤ b
+        ; ??? sonst: a nach r0
+ausgabe:
+        sys  WRITE_INT
+        halt
+```
+
+[hint.en]
+Have one of the two numbers ready as the result already. Only if the other one is larger do you take it instead. A single comparison is enough.
+---
+After `cmp a, b`, `jgt` jumps if a > b, `jge` if a ≥ b, `jlt` if a < b and `jle` if a ≤ b; `jmp` always jumps. Set a breakpoint on the jump and look at the flags.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = a
+        sys  READ_INT          ; r0 = b
+        cmp  r1, r0            ; a - b, flags only
+        ; ??? jump to ausgabe if a ≤ b
+        ; ??? otherwise: a into r0
+ausgabe:
+        sys  WRITE_INT
+        halt
+```
+
+[learned.de]
+`cmp` subtrahiert, ohne das Ergebnis zu behalten; die Flags merken sich nur, ob es null, negativ oder übergelaufen war. Ein bedingter Sprung liest sie. In C:
+
+```c
+int max = (a > b) ? a : b;
+```
+
+Echte Prozessoren: x86 schreibt `cmp ecx, eax` und `jle ausgabe`, ARM `cmp w1, w0` und `b.le ausgabe`. RISC-V hat keine Flags; dort vergleicht der Sprungbefehl selbst zwei Register (`blt`, `bge`).
+
+**Profi-Blick:** Warum `jle` und nicht `jbe`? `jbe` vergleicht ohne Vorzeichen, dann wäre −1 (0xFFFFFFFF) größer als 1. Für so ein Maximum sparen sich Compiler den Sprung oft ganz: x86 hat dafür `cmovg` (bedingt kopieren), ARM `csel`.
+
+[learned.en]
+`cmp` subtracts without keeping the result; the flags only remember whether it was zero, negative or overflowed. A conditional jump reads them. In C:
+
+```c
+int max = (a > b) ? a : b;
+```
+
+Real processors: x86 writes `cmp ecx, eax` and `jle ausgabe`, ARM `cmp w1, w0` and `b.le ausgabe`. RISC-V has no flags; there the branch instruction itself compares two registers (`blt`, `bge`).
+
+**Pro view:** Why `jle` and not `jbe`? `jbe` compares without a sign, and then −1 (0xFFFFFFFF) would be larger than 1. For a maximum like this, compilers often skip the jump altogether: x86 has `cmovg` (conditional move) for it, ARM has `csel`.
+
+[start]
+; Die größere Zahl
+; Lies a und b und gib die größere Zahl aus.
+
+        halt
+
+[reference]
+        sys  READ_INT          ; r0 = a
+        mov  r1, r0            ; r1 = a
+        sys  READ_INT          ; r0 = b
+        cmp  r1, r0            ; a - b, nur Flags
+        jle  ausgabe           ; a ≤ b: b steht schon in r0
+        mov  r0, r1            ; sonst ist a größer
+ausgabe:
+        sys  WRITE_INT
+        halt
+
+[test]
+name = zweite-groesser
+in = 3 7
+out = 7
+
+[test]
+name = erste-groesser
+in = 7 3
+out = 7
+
+[test]
+name = vorzeichen
+in = -5 3
+out = 3
+
+[test]
+name = gleich
+in = 4 4
+out = 4
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = -1 1
+out = 1
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 1 -1
+out = 1
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = 0 0
+out = 0
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 0 -1
+out = 0
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = -2147483648 2147483647
+out = 2147483647
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 2147483647 -2147483648
+out = 2147483647
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = -2147483648 -2147483647
+out = -2147483647
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 100000 99999
+out = 100000
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = -7 -7
+out = -7
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = -5 -2
+out = -2
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = 12 -12
+out = 12
+
+[test]
+name = verdeckt-12
+hidden = yes
+in = 2147483646 2147483647
+out = 2147483647

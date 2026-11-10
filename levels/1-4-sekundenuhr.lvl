@@ -1,0 +1,205 @@
+[level]
+id = 1-4-sekundenuhr
+version = 1
+chapter = 1
+order = 4
+kind = final
+title.de = Sekundenuhr
+title.en = Stopwatch
+card.de = Aus einer großen Zahl Sekunden werden Stunden, Minuten und Sekunden.
+card.en = Turn a big number of seconds into hours, minutes and seconds.
+budget = 100000
+seed = 1402
+mobile = no
+
+[text.de]
+Eine Stoppuhr zählt nur Sekunden. Lies eine Sekundenzahl zwischen 0 und 359999 und gib drei Zahlen aus: Stunden, Minuten, Sekunden.
+
+Dafür gibt es die **Ganzzahldivision**: `div r2, r1, 60` rechnet r1 / 60 und lässt den Rest weg. `rem r2, r1, 60` liefert genau diesen Rest.
+
+Beispiel: Eingabe `3725` → Ausgabe `1 2 5` (1 Stunde, 2 Minuten, 5 Sekunden).
+
+[text.en]
+A stopwatch only counts seconds. Read a number of seconds between 0 and 359999 and print three numbers: hours, minutes, seconds.
+
+This is what **integer division** is for: `div r2, r1, 60` computes r1 / 60 and drops the remainder. `rem r2, r1, 60` gives you exactly that remainder.
+
+Example: input `3725` → output `1 2 5` (1 hour, 2 minutes, 5 seconds).
+
+[hint.de]
+Wie viele volle Stunden stecken in der Zahl? Was übrig bleibt, ist weniger als eine Stunde; darin suchst du die vollen Minuten. Was dann noch übrig bleibt, sind die Sekunden.
+---
+Eine Stunde hat 3600 Sekunden. `div` liefert die vollen Stunden, `rem` den Rest darunter. Halte die Zahl in einem eigenen Register, denn `sys WRITE_INT` braucht r0 für jede Ausgabe.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = Sekunden gesamt
+        div  r0, r1, 3600      ; r0 = Stunden
+        sys  WRITE_INT
+        ; ??? r1 = Rest unter einer Stunde
+        ; ??? r0 = Minuten, ausgeben
+        ; ??? r0 = Sekunden, ausgeben
+        halt
+```
+
+[hint.en]
+How many full hours are in the number? What is left over is less than an hour; in it you look for the full minutes. Whatever remains after that are the seconds.
+---
+An hour has 3600 seconds. `div` gives the full hours, `rem` the remainder below them. Keep the number in a register of its own, because `sys WRITE_INT` needs r0 for every output.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = total seconds
+        div  r0, r1, 3600      ; r0 = hours
+        sys  WRITE_INT
+        ; ??? r1 = remainder below one hour
+        ; ??? r0 = minutes, print
+        ; ??? r0 = seconds, print
+        halt
+```
+
+[learned.de]
+Eine Ganzzahldivision hat zwei Ergebnisse: den Quotienten und den Rest. In C:
+
+```c
+int s = read_int();
+printf("%d %d %d", s / 3600, s % 3600 / 60, s % 60);
+```
+
+Echte Prozessoren: Bei x86 liefert ein einziger `idiv` beides, den Quotienten in `eax` und den Rest in `edx`. ARM hat `sdiv`, aber keinen Restbefehl; den Rest rechnet `msub` aus (a − q·b). RISC-V hat `div` und `rem` wie Stapelwerk.
+
+**Profi-Blick:** Division ist auch in echten Prozessoren einer der langsamsten Rechenbefehle, hier kostet sie 8 Zyklen. Teilt ein Programm durch eine feste Zahl wie 3600, ersetzen Compiler die Division deshalb durch eine Multiplikation mit einer passenden „magischen Zahl“ und einen Schiebebefehl.
+
+[learned.en]
+An integer division has two results: the quotient and the remainder. In C:
+
+```c
+int s = read_int();
+printf("%d %d %d", s / 3600, s % 3600 / 60, s % 60);
+```
+
+Real processors: on x86 a single `idiv` gives you both, the quotient in `eax` and the remainder in `edx`. ARM has `sdiv` but no remainder instruction; `msub` computes the remainder (a − q·b). RISC-V has `div` and `rem`, like Stapelwerk.
+
+**Pro view:** Division is one of the slowest arithmetic instructions in real processors too; here it costs 8 cycles. When a program divides by a fixed number such as 3600, compilers therefore replace the division with a multiplication by a suitable "magic number" and a shift.
+
+[start]
+; Sekundenuhr
+; Lies eine Sekundenzahl und gib Stunden, Minuten und Sekunden aus.
+
+        halt
+
+[reference]
+        sys  READ_INT          ; r0 = Sekunden gesamt
+        mov  r1, r0            ; r1 = Sekunden gesamt
+        div  r0, r1, 3600      ; r0 = volle Stunden
+        sys  WRITE_INT
+        rem  r1, r1, 3600      ; r1 = Rest unter einer Stunde
+        div  r0, r1, 60        ; r0 = volle Minuten
+        sys  WRITE_INT
+        rem  r0, r1, 60        ; r0 = übrige Sekunden
+        sys  WRITE_INT
+        halt
+
+[test]
+name = grundfall
+in = 3725
+out = 1 2 5
+
+[test]
+name = null
+in = 0
+out = 0 0 0
+
+[test]
+name = nur-sekunden
+in = 59
+out = 0 0 59
+
+[test]
+name = maximum
+in = 359999
+out = 99 59 59
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 60
+out = 0 1 0
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 3599
+out = 0 59 59
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = 3600
+out = 1 0 0
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 3661
+out = 1 1 1
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = 86399
+out = 23 59 59
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 86400
+out = 24 0 0
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 100000
+out = 27 46 40
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 45296
+out = 12 34 56
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = 1
+out = 0 0 1
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 7322
+out = 2 2 2
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = 359940
+out = 99 59 0
+
+[test]
+name = verdeckt-12
+hidden = yes
+in = 12345
+out = 3 25 45
+
+[test]
+name = verdeckt-13
+hidden = yes
+in = 3540
+out = 0 59 0
+
+[test]
+name = verdeckt-14
+hidden = yes
+in = 7200
+out = 2 0 0

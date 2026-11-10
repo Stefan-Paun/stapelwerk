@@ -1,0 +1,209 @@
+[level]
+id = 3-3-halbe-wahrheit
+version = 1
+chapter = 3
+order = 3
+kind = debug
+title.de = Halbe Wahrheit
+title.en = Half Truth
+card.de = Halbieren klappt bei positiven Zahlen. Aus negativen werden Milliarden.
+card.en = Halving works for positive numbers. Negative ones turn into billions.
+budget = 100000
+seed = 3302
+mobile = yes
+
+[text.de]
+Ein Messgerät liefert positive und negative Werte; die Eingabe endet mit der Endmarke 0. Dieses Programm soll jeden Wert halbieren und dabei abrunden: Aus 7 wird 3, aus −7 wird −4. Bei positiven Werten stimmt das. Aus −8 wird aber 2147483644.
+
+Finde heraus, was beim Schieben mit dem **Vorzeichenbit** passiert, und repariere das Programm.
+
+Beispiel: Eingabe `7 -7 0` → Ausgabe `3 -4`.
+
+[text.en]
+A measuring device delivers positive and negative values; the input ends with the sentinel 0. This program is supposed to halve every value, rounding down: 7 becomes 3, −7 becomes −4. For positive values that's correct. But −8 turns into 2147483644.
+
+Find out what happens to the **sign bit** when shifting, and repair the program.
+
+Example: input `7 -7 0` → output `3 -4`.
+
+[hint.de]
+Schau dir −8 als Bitmuster an: Bit 31 ist 1, das ist das Vorzeichen. Was steht nach dem Schieben ganz links?
+---
+`shr` schiebt links eine 0 nach (logisch). `sar` kopiert stattdessen Bit 31 (arithmetisch), so bleibt das Vorzeichen erhalten. `div` hilft hier nicht: Es macht aus −7 / 2 eine −3. Achte im Debugger auf das Flag N.
+---
+```
+schleife:
+        sys  READ_INT
+        cmp  r0, 0
+        jz   fertig
+        ; ??? halbieren, Vorzeichen behalten
+        sys  WRITE_INT
+        jmp  schleife
+fertig:
+        halt
+```
+
+[hint.en]
+Look at −8 as a bit pattern: bit 31 is 1, that is the sign. What is in the leftmost place after the shift?
+---
+`shr` shifts in a 0 on the left (logical). `sar` copies bit 31 instead (arithmetic), so the sign is kept. `div` doesn't help here: it turns −7 / 2 into −3. Watch the N flag in the debugger.
+---
+```
+schleife:
+        sys  READ_INT
+        cmp  r0, 0
+        jz   fertig
+        ; ??? halve, keep the sign
+        sys  WRITE_INT
+        jmp  schleife
+fertig:
+        halt
+```
+
+[learned.de]
+Nach rechts schieben halbiert, aber nur das **arithmetische** Schieben (`sar`) erhält das Vorzeichen. Es rundet dabei immer ab, auch bei negativen Zahlen. In C:
+
+```c
+int x = read_int();
+printf("%d ", x >> 1);   // GCC, Clang: arithmetisch, -7 -> -4
+printf("%d ", x / 2);    // rundet Richtung 0,       -7 -> -3
+```
+
+Bei `unsigned` schiebt C immer logisch. Bei negativen `int`-Werten überlässt der Standard die Wahl dem Compiler; GCC und Clang schieben arithmetisch.
+
+Echte Prozessoren haben beide Befehle: x86 `shr` und `sar`, ARM `lsr` und `asr`, RISC-V `srl` und `sra`.
+
+**Profi-Blick:** Weil `x / 2` anders rundet als `x >> 1`, erzeugen Compiler für eine Division durch 2 ein `sar` plus eine kleine Korrektur für negative Zahlen.
+
+[learned.en]
+Shifting right halves a number, but only the **arithmetic** shift (`sar`) keeps the sign. It always rounds down, even for negative numbers. In C:
+
+```c
+int x = read_int();
+printf("%d ", x >> 1);   // GCC, Clang: arithmetic, -7 -> -4
+printf("%d ", x / 2);    // rounds towards 0,      -7 -> -3
+```
+
+For `unsigned`, C always shifts logically. For negative `int` values the standard leaves the choice to the compiler; GCC and Clang shift arithmetically.
+
+Real processors have both instructions: x86 `shr` and `sar`, ARM `lsr` and `asr`, RISC-V `srl` and `sra`.
+
+**Pro view:** Because `x / 2` rounds differently from `x >> 1`, compilers produce a `sar` plus a small correction for negative numbers when you divide by 2.
+
+[start]
+; Halbe Wahrheit
+; Liest Messwerte bis zur Endmarke 0 und gibt jeden halbiert aus,
+; abgerundet: 7 -> 3, -7 -> -4.
+
+schleife:
+        sys  READ_INT          ; r0 = Messwert
+        cmp  r0, 0
+        jz   fertig            ; Endmarke
+        shr  r0, 1             ; halbieren
+        sys  WRITE_INT
+        jmp  schleife
+fertig:
+        halt
+
+[reference]
+schleife:
+        sys  READ_INT          ; r0 = Messwert
+        cmp  r0, 0
+        jz   fertig            ; Endmarke
+        sar  r0, 1             ; halbieren, Vorzeichenbit bleibt erhalten
+        sys  WRITE_INT
+        jmp  schleife
+fertig:
+        halt
+
+[test]
+name = positiv
+in = 8 7 0
+out = 4 3
+
+[test]
+name = minus-acht
+in = -8 0
+out = -4
+
+[test]
+name = sieben
+in = 7 -7 0
+out = 3 -4
+
+[test]
+name = minus-eins
+in = -1 1 0
+out = -1 0
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = -2147483648 0
+out = -1073741824
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 2147483647 0
+out = 1073741823
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = -3 0
+out = -2
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 100 -100 0
+out = 50 -50
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = -5 -6 -7 -8 0
+out = -3 -3 -4 -4
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 0
+out =
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 1 2 3 0
+out = 0 1 1
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = -1000001 0
+out = -500001
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = 65535 -65535 0
+out = 32767 -32768
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = -2 0
+out = -1
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = 42 -42 43 -43 0
+out = 21 -21 21 -22
+
+[test]
+name = verdeckt-12
+hidden = yes
+in = -2147483647 0
+out = -1073741824

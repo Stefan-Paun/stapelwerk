@@ -1,0 +1,218 @@
+[level]
+id = 3-4-hex-ausgabe
+version = 1
+chapter = 3
+order = 4
+kind = final
+title.de = Hex-Ausgabe
+title.en = Hex Dump
+card.de = Jede Zahl in genau 8 Hexziffern, so wie der Prozessor sie sieht.
+card.en = Every number in exactly 8 hex digits, the way the processor sees it.
+budget = 100000
+seed = 3402
+mobile = no
+
+[text.de]
+Im **Hexadezimalsystem** steht jede Ziffer für 4 Bits, ein **Nibble**: 0–9, dann A–F für 10–15. Eine 32-Bit-Zahl hat also genau 8 Hexziffern.
+
+Lies eine Zahl und gib sie als genau 8 Hexziffern aus, mit führenden Nullen und großen Buchstaben. `sys WRITE_CHAR` gibt das unterste Byte von r0 als Zeichen aus. Zeichen sind Zahlen im **ASCII**-Code: `'0'` ist 48, `'A'` ist 65. Der Assembler versteht beide Schreibweisen.
+
+Beispiel: Eingabe `255` → Ausgabe `000000FF`; `-1` → `FFFFFFFF`.
+
+[text.en]
+In the **hexadecimal** system each digit stands for 4 bits, a **nibble**: 0–9, then A–F for 10–15. So a 32-bit number has exactly 8 hex digits.
+
+Read a number and print it as exactly 8 hex digits, with leading zeros and capital letters. `sys WRITE_CHAR` prints the lowest byte of r0 as a character. Characters are numbers in **ASCII** code: `'0'` is 48, `'A'` is 65. The assembler understands both ways of writing them.
+
+Example: input `255` → output `000000FF`; `-1` → `FFFFFFFF`.
+
+[hint.de]
+Fang beim obersten Nibble an, denn die Ausgabe beginnt links. Hol es nach unten, mach ein Zeichen daraus, gib es aus und bring das nächste Nibble nach oben. Achtmal.
+---
+`shr r0, r1, 28` holt die obersten 4 Bits von r1 nach unten, auch bei negativen Zahlen. `shl r1, 4` bringt das nächste Nibble nach oben. Ziffer 0–9: plus `'0'`; Ziffer 10–15: plus `'A' - 10`.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = Zahl
+        mov  r2, 8             ; r2 = Ziffern übrig
+schleife:
+        shr  r0, r1, 28        ; r0 = oberstes Nibble
+        cmp  r0, 10
+        ; ??? r0 in ein Zeichen verwandeln
+        sys  WRITE_CHAR
+        shl  r1, 4             ; nächstes Nibble nach oben
+        ; ??? r2 - 1, weiter solange r2 ≠ 0
+        halt
+```
+
+[hint.en]
+Start with the top nibble, because the output begins on the left. Bring it down, turn it into a character, print it and move the next nibble to the top. Eight times.
+---
+`shr r0, r1, 28` brings the top 4 bits of r1 down, even for negative numbers. `shl r1, 4` moves the next nibble to the top. Digit 0–9: add `'0'`; digit 10–15: add `'A' - 10`.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = number
+        mov  r2, 8             ; r2 = digits left
+schleife:
+        shr  r0, r1, 28        ; r0 = top nibble
+        cmp  r0, 10
+        ; ??? turn r0 into a character
+        sys  WRITE_CHAR
+        shl  r1, 4             ; next nibble to the top
+        ; ??? r2 - 1, continue while r2 ≠ 0
+        halt
+```
+
+[learned.de]
+Du hast eine Zahl in Zeichen verwandelt: Ein Nibble wird zu einer Ziffer, eine Ziffer zu einem ASCII-Code. In C:
+
+```c
+printf("%08X", x);
+```
+
+Hinter `printf` steckt dieselbe Schleife. Zwischen `'9'` (57) und `'A'` (65) liegen in ASCII sieben andere Zeichen, deshalb brauchst du zwei Fälle.
+
+Echte Prozessoren haben dafür keinen eigenen Befehl. Bibliotheken nehmen meist eine Tabelle: `"0123456789ABCDEF"[n]` liefert das Zeichen ohne Vergleich. Tabellen im Speicher sind das Thema von Kapitel 4.
+
+**Profi-Blick:** Debugger und Speicheransichten zeigen Zahlen in Hex, weil man dort jedes Byte direkt sieht: `0x12345678` besteht aus den Bytes `12`, `34`, `56` und `78`.
+
+[learned.en]
+You turned a number into characters: a nibble becomes a digit, a digit becomes an ASCII code. In C:
+
+```c
+printf("%08X", x);
+```
+
+Behind `printf` is the same loop. In ASCII, there are seven other characters between `'9'` (57) and `'A'` (65), which is why you need two cases.
+
+Real processors have no instruction of their own for this. Libraries usually use a table: `"0123456789ABCDEF"[n]` gives the character without any comparison. Tables in memory are the topic of chapter 4.
+
+**Pro view:** Debuggers and memory views show numbers in hex because you can see every byte directly: `0x12345678` consists of the bytes `12`, `34`, `56` and `78`.
+
+[start]
+; Hex-Ausgabe
+; Lies eine Zahl und gib sie als genau 8 Hexziffern aus (-1 -> FFFFFFFF).
+
+        halt
+
+[reference]
+        sys  READ_INT          ; r0 = Zahl
+        mov  r1, r0            ; r1 = Zahl
+        mov  r2, 8             ; r2 = Ziffern übrig
+schleife:
+        shr  r0, r1, 28        ; r0 = oberstes Nibble (0 bis 15)
+        cmp  r0, 10
+        jlt  ziffer            ; 0 bis 9: nur '0' dazu
+        add  r0, 'A' - 10 - '0' ; 10 bis 15: die 7 Zeichen zwischen '9' und 'A' überspringen
+ziffer:
+        add  r0, '0'
+        sys  WRITE_CHAR
+        shl  r1, 4             ; nächstes Nibble nach oben
+        sub  r2, 1
+        jnz  schleife
+        halt
+
+[test]
+name = ein-byte
+in = 255
+out_text = "000000FF"
+
+[test]
+name = null
+in = 0
+out_text = "00000000"
+
+[test]
+name = minus-eins
+in = -1
+out_text = "FFFFFFFF"
+
+[test]
+name = alle-ziffern
+in = 305419896
+out_text = "12345678"
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = -2147483648
+out_text = "80000000"
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 2147483647
+out_text = "7FFFFFFF"
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = -559038737
+out_text = "DEADBEEF"
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 10
+out_text = "0000000A"
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = 9
+out_text = "00000009"
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 16
+out_text = "00000010"
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = -889275714
+out_text = "CAFEBABE"
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 252645135
+out_text = "0F0F0F0F"
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = -1412567295
+out_text = "ABCDEF01"
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 1000000
+out_text = "000F4240"
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = -1698898192
+out_text = "9ABCDEF0"
+
+[test]
+name = verdeckt-12
+hidden = yes
+in = 15
+out_text = "0000000F"
+
+[test]
+name = verdeckt-13
+hidden = yes
+in = -16
+out_text = "FFFFFFF0"
+
+[test]
+name = verdeckt-14
+hidden = yes
+in = 1
+out_text = "00000001"

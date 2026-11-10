@@ -1,0 +1,198 @@
+[level]
+id = 1-1-plus-und-minus
+version = 1
+chapter = 1
+order = 1
+kind = normal
+title.de = Plus und Minus
+title.en = Plus and Minus
+card.de = Zwei Zahlen lesen, aufbewahren und mit ihnen rechnen.
+card.en = Read two numbers, keep them safe and calculate with them.
+budget = 100000
+seed = 1102
+mobile = yes
+
+[text.de]
+Lies zwei Zahlen a und b. Gib zuerst a + b aus, dann a − b.
+
+`sys READ_INT` holt die nächste Zahl aus der Eingabe und legt sie in `r0`. Jeder weitere Aufruf überschreibt `r0`. Bring a deshalb in ein anderes [Register](handbuch:register) in Sicherheit, bevor du b liest.
+
+Rechenbefehle haben drei Operanden: `add r2, r0, r1` heißt r2 = r0 + r1. Die [Kurzform](handbuch:befehle) `add r2, r1` heißt r2 = r2 + r1.
+
+Beispiel: Eingabe `3 4` → Ausgabe `7 -1`.
+
+[text.en]
+Read two numbers a and b. Print a + b first, then a − b.
+
+`sys READ_INT` fetches the next number from the input and puts it into `r0`. Every further call overwrites `r0`. So move a to another [register](handbuch:register) for safekeeping before you read b.
+
+Arithmetic instructions have three operands: `add r2, r0, r1` means r2 = r0 + r1. The [short form](handbuch:befehle) `add r2, r1` means r2 = r2 + r1.
+
+Example: input `3 4` → output `7 -1`.
+
+[hint.de]
+Eingabe und Ausgabe benutzen dasselbe Register. Überleg dir, wo a bleibt, während b gelesen wird, und wo das Ergebnis stehen muss, bevor es ausgegeben wird.
+---
+`mov r1, r0` kopiert r0 nach r1. `add r0, r1, r2` und `sub r0, r1, r2` schreiben das Ergebnis direkt nach r0, wo `sys WRITE_INT` es erwartet. Mach Einzelschritte und schau nach jedem `sys READ_INT` auf r0.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = a
+        sys  READ_INT          ; r0 = b
+        ; ??? b nach r2
+        ; ??? r0 = a + b
+        sys  WRITE_INT
+        ; ??? r0 = a - b
+        sys  WRITE_INT
+        halt
+```
+
+[hint.en]
+Input and output use the same register. Think about where a stays while b is being read, and where the result has to be before it is printed.
+---
+`mov r1, r0` copies r0 to r1. `add r0, r1, r2` and `sub r0, r1, r2` write the result straight into r0, where `sys WRITE_INT` expects it. Single-step and look at r0 after each `sys READ_INT`.
+---
+```
+        sys  READ_INT
+        mov  r1, r0            ; r1 = a
+        sys  READ_INT          ; r0 = b
+        ; ??? b into r2
+        ; ??? r0 = a + b
+        sys  WRITE_INT
+        ; ??? r0 = a - b
+        sys  WRITE_INT
+        halt
+```
+
+[learned.de]
+Du hast Werte aus der Eingabe in Registern aufbewahrt und mit ihnen gerechnet. In C:
+
+```c
+int a = read_int(), b = read_int();
+printf("%d %d", a + b, a - b);
+```
+
+Echte Prozessoren: ARM (`add w0, w1, w2`) und RISC-V (`add a0, a1, a2`) haben drei Operanden wie Stapelwerk. x86 kennt nur die **Zwei-Operanden-Form**: `add eax, ebx` heißt eax = eax + ebx, der alte Wert von eax ist danach weg.
+
+**Profi-Blick:** Schau dir den Test mit `2147483647 1` an. Die Summe ist −2147483648: Die 32 Bits laufen über und fangen bei der kleinsten Zahl wieder an. Der Prozessor vermerkt das nur in einem Flag. In C ist so ein Überlauf bei `int` sogar undefiniertes Verhalten.
+
+[learned.en]
+You kept values from the input in registers and calculated with them. In C:
+
+```c
+int a = read_int(), b = read_int();
+printf("%d %d", a + b, a - b);
+```
+
+Real processors: ARM (`add w0, w1, w2`) and RISC-V (`add a0, a1, a2`) have three operands, like Stapelwerk. x86 only has the **two-operand form**: `add eax, ebx` means eax = eax + ebx, and the old value of eax is gone.
+
+**Pro view:** Look at the test with `2147483647 1`. The sum is −2147483648: the 32 bits overflow and start again at the smallest number. The processor only notes this in a flag. In C, such an overflow of an `int` is even undefined behaviour.
+
+[start]
+; Plus und Minus
+; Lies a und b, gib a + b und dann a - b aus.
+
+        halt
+
+[reference]
+        sys  READ_INT          ; r0 = a
+        mov  r1, r0            ; r1 = a
+        sys  READ_INT          ; r0 = b
+        mov  r2, r0            ; r2 = b
+        add  r0, r1, r2        ; r0 = a + b
+        sys  WRITE_INT
+        sub  r0, r1, r2        ; r0 = a - b
+        sys  WRITE_INT
+        halt
+
+[test]
+name = grundfall
+in = 3 4
+out = 7 -1
+
+[test]
+name = nullen
+in = 0 0
+out = 0 0
+
+[test]
+name = negativ
+in = -5 -8
+out = -13 3
+
+[test]
+name = ueberlauf
+in = 2147483647 1
+out = -2147483648 2147483646
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 10 10
+out = 20 0
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 1 0
+out = 1 1
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = 0 1
+out = 1 -1
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = -2147483648 1
+out = -2147483647 2147483647
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = -2147483648 -1
+out = 2147483647 -2147483647
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = 1000000 -1000000
+out = 0 2000000
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 123456 654321
+out = 777777 -530865
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = -1 -1
+out = -2 0
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = 2147483647 -1
+out = 2147483646 -2147483648
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 40000 30000
+out = 70000 10000
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = -32768 32767
+out = -1 -65535
+
+[test]
+name = verdeckt-12
+hidden = yes
+in = 7 -7
+out = 0 14

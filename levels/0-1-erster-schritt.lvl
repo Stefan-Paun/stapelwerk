@@ -1,0 +1,176 @@
+[level]
+id = 0-1-erster-schritt
+version = 1
+chapter = 0
+order = 1
+kind = tutorial
+title.de = Erster Schritt
+title.en = First Step
+card.de = Ein fertiges Programm malt ein Gesicht, und du siehst dem Prozessor bei jedem Befehl zu.
+card.en = A finished program draws a face, and you watch the processor carry out every instruction.
+budget = 100000
+seed = 102
+mobile = yes
+
+[text.de]
+Dieses Programm ist fertig und malt ein Gesicht auf den [Bildschirm](handbuch:bildschirm). Jede Zeile ist ein **Befehl**; der **PC** (Programmzähler) zeigt auf den nächsten. Die [Register](handbuch:register) sind Speicherplätze im Prozessor, `r1` hält hier die Farbe.
+
+Probier im [Debugger](handbuch:debugger) vier Dinge aus:
+
+- **Schritt** (S): ein Befehl. Achte auf PC und `r1`.
+- **Haltepunkt**: Klick in die Zeilenspalte neben `auge:`.
+- **Lauf** (L): Er hält vor den Augen.
+- **Zurück** (Z): Der rechte Mundwinkel verschwindet wieder.
+
+Dann lauf bis `halt`. Ändern musst du nichts.
+
+[text.en]
+This finished program draws a face on the [screen](handbuch:bildschirm). Every line is an **instruction**; the **PC** (program counter) points at the next one. [Registers](handbuch:register) are storage slots inside the processor; here `r1` holds the colour.
+
+Try four things in the [debugger](handbuch:debugger):
+
+- **Step** (S): one instruction. Watch the PC and `r1`.
+- **Breakpoint**: click the gutter next to `auge:`.
+- **Run** (L): it stops before the eyes.
+- **Back** (Z): the right corner of the mouth disappears again.
+
+Then run to `halt`. You don't need to change anything.
+
+[hint.de]
+Hier gibt es nichts zu programmieren, nur zuzusehen. Nach jedem Schritt ist genau der Befehl erledigt, auf den der PC vorher gezeigt hat, und der PC zeigt auf den nächsten.
+---
+Die Knöpfe heißen Schritt (S), Lauf (L) und Zurück (Z). Einen Haltepunkt setzt du per Klick in die schmale Spalte links neben der Zeile `auge:`; dort erscheint dann ein Punkt.
+---
+So geht die ganze Checkliste:
+```
+S                    ; ein Schritt: PC geht von 0x0100 auf 0x0104
+Klick neben auge:    ; Haltepunkt setzen
+L                    ; Lauf bis zum Haltepunkt
+Z                    ; ein Schritt zurück
+L                    ; Lauf bis halt
+```
+
+[hint.en]
+There is nothing to program here, only something to watch. After each step, exactly the instruction the PC pointed at has been carried out, and the PC points at the next one.
+---
+The buttons are called Step (S), Run (L) and Back (Z). To set a breakpoint, click the narrow column to the left of the line `auge:`; a dot appears there.
+---
+This is the whole checklist:
+```
+S                    ; one step: the PC goes from 0x0100 to 0x0104
+click next to auge:  ; set a breakpoint
+L                    ; run to the breakpoint
+Z                    ; one step back
+L                    ; run to halt
+```
+
+[learned.de]
+Du hast einem Prozessor bei der Arbeit zugesehen: Befehl holen, ausführen, PC weiterzählen. Mehr macht er nie, nur sehr schnell.
+
+Jeder Befehl ist 4 Bytes lang, deshalb wächst der PC pro Schritt um 4. In C wäre jede `stb`-Zeile eine Zuweisung:
+
+```c
+bildschirm[29 * 64 + 29] = LIGHTCYAN;   // linkes Auge
+```
+
+Echte Prozessoren: Bei x86-64 heißt der PC `rip` (instruction pointer), bei ARM und RISC-V `pc`. Ein Debugger wie GDB kann dasselbe wie hier: `stepi` führt einen Befehl aus, `break` setzt einen Haltepunkt, `continue` läuft weiter.
+
+**Profi-Blick:** Rückwärts gehen ist schwer, denn der Prozessor vergisst alte Werte sofort. GDB kann es trotzdem (`record`, dann `reverse-stepi`): Es schreibt jede Änderung mit, genau wie Stapelwerk.
+
+[learned.en]
+You watched a processor at work: fetch an instruction, execute it, advance the PC. That is all it ever does, just very fast.
+
+Every instruction is 4 bytes long, which is why the PC grows by 4 with each step. In C, each `stb` line would be an assignment:
+
+```c
+screen[29 * 64 + 29] = LIGHTCYAN;   // left eye
+```
+
+Real processors: on x86-64 the PC is called `rip` (instruction pointer), on ARM and RISC-V `pc`. A debugger such as GDB does the same things as this one: `stepi` executes one instruction, `break` sets a breakpoint, `continue` runs on.
+
+**Pro view:** Going backwards is hard, because the processor forgets old values immediately. GDB can do it anyway (`record`, then `reverse-stepi`): it records every change, just like Stapelwerk.
+
+[start]
+; Erster Schritt
+; Dieses Programm malt ein Gesicht. Du musst nichts ändern:
+; geh es Schritt für Schritt durch und schau dem Prozessor zu.
+; Ein Pixel (x, y) liegt an der Adresse SCREEN + y*64 + x.
+
+        mov  r1, YELLOW                 ; r1 = Farbe des Mundes (14)
+        stb  r1, [SCREEN + 33*64 + 29]  ; linker Mundwinkel
+        stb  r1, [SCREEN + 34*64 + 30]  ; Unterlippe ...
+        stb  r1, [SCREEN + 34*64 + 31]
+        stb  r1, [SCREEN + 34*64 + 32]
+        stb  r1, [SCREEN + 34*64 + 33]
+        stb  r1, [SCREEN + 33*64 + 34]  ; rechter Mundwinkel
+auge:   mov  r1, LIGHTCYAN              ; r1 = Farbe der Augen (11)
+        stb  r1, [SCREEN + 29*64 + 29]  ; linkes Auge
+        stb  r1, [SCREEN + 30*64 + 29]
+        stb  r1, [SCREEN + 29*64 + 34]  ; rechtes Auge
+        stb  r1, [SCREEN + 30*64 + 34]
+        halt                            ; fertig
+
+[reference]
+        mov  r1, YELLOW                 ; r1 = Farbe des Mundes (14)
+        stb  r1, [SCREEN + 33*64 + 29]  ; linker Mundwinkel
+        stb  r1, [SCREEN + 34*64 + 30]  ; Unterlippe ...
+        stb  r1, [SCREEN + 34*64 + 31]
+        stb  r1, [SCREEN + 34*64 + 32]
+        stb  r1, [SCREEN + 34*64 + 33]
+        stb  r1, [SCREEN + 33*64 + 34]  ; rechter Mundwinkel
+auge:   mov  r1, LIGHTCYAN              ; r1 = Farbe der Augen (11)
+        stb  r1, [SCREEN + 29*64 + 29]  ; linkes Auge
+        stb  r1, [SCREEN + 30*64 + 29]
+        stb  r1, [SCREEN + 29*64 + 34]  ; rechtes Auge
+        stb  r1, [SCREEN + 30*64 + 34]
+        halt                            ; fertig
+
+[test]
+name = gesicht
+expect_screen = gesicht
+
+[test]
+name = pixelprobe
+hidden = yes
+expectb 0xF75D = 11
+expectb 0xF7A2 = 11
+expectb 0xF85D = 14
+expectb 0xF89E = 14 14 14 14
+expectb 0xF7DF = 0
+
+[image.gesicht]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.............................B....B
+.............................B....B
+
+
+.............................E....E
+..............................EEEE

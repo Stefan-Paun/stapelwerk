@@ -1,0 +1,94 @@
+[level]
+id = 0-2-ein-register-aendern
+version = 1
+chapter = 0
+order = 2
+kind = normal
+title.de = Ein Register ändern
+title.en = Change a Register
+card.de = Ein Register bekommt einen neuen Wert, erst im Debugger, dann im Code.
+card.en = Give a register a new value, first in the debugger, then in the code.
+budget = 100000
+seed = 202
+mobile = yes
+
+[text.de]
+Das Programm gibt 7 aus, gewünscht ist 42.
+
+`mov r0, 7` legt 7 ins [Register](handbuch:register) `r0`. Der [Systemaufruf](handbuch:systemaufrufe) `sys WRITE_INT` gibt aus, was gerade in `r0` steht.
+
+Probier es zuerst im Debugger: Haltepunkt auf `sys WRITE_INT`, Lauf starten, auf den Wert von `r0` klicken, 42 eintragen, einen Schritt machen. Jetzt erscheint 42.
+
+Das gilt aber nur für diesen Lauf. Ändere danach den Code, damit das Programm immer 42 ausgibt.
+
+[text.en]
+The program prints 7; we want 42.
+
+`mov r0, 7` puts 7 into the [register](handbuch:register) `r0`. The [system call](handbuch:systemaufrufe) `sys WRITE_INT` prints whatever is in `r0` at that moment.
+
+Try it in the debugger first: breakpoint on `sys WRITE_INT`, start a run, click the value of `r0`, enter 42, take one step. Now 42 appears.
+
+That only lasts for this run, though. Then change the code so that the program always prints 42.
+
+[hint.de]
+Der Debugger ändert nur den Zustand der laufenden Maschine. Bei jedem neuen Start gilt wieder, was im Code steht. Die 7 kommt aus genau einer Zeile.
+---
+Register kannst du nur bearbeiten, während die Maschine pausiert, zum Beispiel an einem Haltepunkt: Klick auf den Wert und tipp die neue Zahl ein. Im Code legt `mov r0, 42` die 42 in r0.
+---
+```
+        mov  r0, ???           ; die gewünschte Zahl
+        sys  WRITE_INT         ; gib r0 aus
+        halt
+```
+
+[hint.en]
+The debugger only changes the state of the running machine. Every new start goes back to what the code says. The 7 comes from exactly one line.
+---
+You can only edit a register while the machine is paused, for example at a breakpoint: click the value and type the new number. In the code, `mov r0, 42` puts 42 into r0.
+---
+```
+        mov  r0, ???           ; the number we want
+        sys  WRITE_INT         ; print r0
+        halt
+```
+
+[learned.de]
+Ein Register ist ein Speicherplatz im Prozessor: `mov` schreibt einen Wert hinein, der Systemaufruf liest ihn von dort. In C:
+
+```c
+int x = 42;
+printf("%d", x);
+```
+
+Echte Prozessoren: x86 schreibt `mov eax, 42`, ARM `mov w0, #42`, RISC-V `li a0, 42`. Auch dort bekommt ein Systemaufruf seine Werte in Registern.
+
+**Profi-Blick:** Register im Debugger zu ändern ist ein echtes Werkzeug. In GDB heißt es `set $rax = 42`. So prüfst du eine Vermutung („Was wäre, wenn hier 42 stünde?“), bevor du den Code änderst.
+
+[learned.en]
+A register is a storage slot inside the processor: `mov` writes a value into it, and the system call reads it from there. In C:
+
+```c
+int x = 42;
+printf("%d", x);
+```
+
+Real processors: x86 writes `mov eax, 42`, ARM `mov w0, #42`, RISC-V `li a0, 42`. There, too, a system call receives its values in registers.
+
+**Pro view:** Changing registers in the debugger is a real tool. In GDB it is `set $rax = 42`. That way you can test a guess ("what if there were 42 here?") before you change the code.
+
+[start]
+; Ein Register ändern
+; Das Programm soll 42 ausgeben, gibt aber 7 aus.
+
+        mov  r0, 7             ; r0 = 7
+        sys  WRITE_INT         ; gib die Zahl in r0 aus
+        halt
+
+[reference]
+        mov  r0, 42            ; r0 = 42
+        sys  WRITE_INT         ; gib die Zahl in r0 aus
+        halt
+
+[test]
+name = zweiundvierzig
+out = 42

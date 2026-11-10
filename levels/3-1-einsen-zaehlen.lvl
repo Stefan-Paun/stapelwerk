@@ -1,0 +1,216 @@
+[level]
+id = 3-1-einsen-zaehlen
+version = 1
+chapter = 3
+order = 1
+kind = normal
+title.de = Einsen zählen
+title.en = Count the Ones
+card.de = Wie viele Bits einer Zahl sind 1? Auch negative Zahlen sind nur Bits.
+card.en = How many bits of a number are 1? Negative numbers are just bits too.
+budget = 100000
+seed = 3102
+mobile = no
+forbid = div divu rem remu
+
+[text.de]
+Lies eine Zahl und gib aus, wie viele ihrer 32 Bits 1 sind. 13 ist binär `0b1101`, hat also drei Einsen. Auch negative Zahlen sind nur Bits: −1 ist im [Zweierkomplement](handbuch:zweierkomplement) `0xFFFFFFFF`, alle 32 Bits gesetzt.
+
+Neu sind die Bitbefehle: `and`, `or`, `xor` und `not` rechnen Bit für Bit (`and` ergibt nur dort 1, wo beide Bits 1 sind); `shl` und `shr` schieben alle Bits nach links bzw. rechts und füllen mit 0 auf. Division ist hier gesperrt.
+
+Beispiel: Eingabe `13` → Ausgabe `3`; `-1` → `32`.
+
+[text.en]
+Read a number and print how many of its 32 bits are 1. 13 is `0b1101` in binary, so it has three ones. Negative numbers are just bits too: in [two's complement](handbuch:zweierkomplement), −1 is `0xFFFFFFFF`, all 32 bits set.
+
+New here are the bit instructions: `and`, `or`, `xor` and `not` work bit by bit (`and` gives 1 only where both bits are 1); `shl` and `shr` shift all bits left or right and fill in with 0. Division is locked here.
+
+Example: input `13` → output `3`; `-1` → `32`.
+
+[hint.de]
+Schau dir immer nur das unterste Bit an und zähl es mit. Dann schieb die Zahl eine Stelle nach rechts, bis keine Eins mehr übrig ist.
+---
+`and r2, r0, 1` lässt nur Bit 0 übrig, die 1 ist eine **Maske**. `shr r0, 1` schiebt nach rechts, füllt links mit 0 auf und setzt Z, sobald nichts übrig ist. So endet die Schleife auch bei −1.
+---
+```
+        sys  READ_INT          ; r0 = Zahl
+        mov  r1, 0             ; r1 = Anzahl Einsen
+schleife:
+        ; ??? r2 = unterstes Bit von r0
+        ; ??? r2 zur Anzahl zählen
+        shr  r0, 1             ; setzt Z, wenn r0 jetzt 0 ist
+        ; ??? weiter, solange r0 nicht 0 ist
+        mov  r0, r1
+        sys  WRITE_INT
+        halt
+```
+
+[hint.en]
+Only ever look at the lowest bit and count it. Then shift the number one place to the right, until no ones are left.
+---
+`and r2, r0, 1` keeps only bit 0; the 1 is a **mask**. `shr r0, 1` shifts right, fills in a 0 on the left and sets Z once nothing is left. So the loop ends for −1 too.
+---
+```
+        sys  READ_INT          ; r0 = number
+        mov  r1, 0             ; r1 = count of ones
+schleife:
+        ; ??? r2 = lowest bit of r0
+        ; ??? add r2 to the count
+        shr  r0, 1             ; sets Z when r0 is now 0
+        ; ??? continue as long as r0 is not 0
+        mov  r0, r1
+        sys  WRITE_INT
+        halt
+```
+
+[learned.de]
+Mit einer **Maske** (`and`) holst du einzelne Bits heraus, und durch Schieben kommt jedes Bit einmal an die Stelle 0. In C:
+
+```c
+unsigned int x = read_int();
+int einsen = 0;
+while (x != 0) { einsen += x & 1; x >>= 1; }
+```
+
+`unsigned` ist hier wichtig: Nur dann schiebt `>>` sicher Nullen nach.
+
+Echte Prozessoren haben dafür einen eigenen Befehl: x86 `popcnt`, RISC-V `cpop` (aus der Erweiterung Zbb); ARM zählt mit dem Vektorbefehl `cnt`. In C liefern `__builtin_popcount(x)` (GCC, Clang) und seit C23 `stdc_count_ones(x)` das Ergebnis.
+
+**Profi-Blick:** `x & (x - 1)` löscht die unterste Eins. Wer das wiederholt, bis x null ist, braucht nur so viele Durchläufe, wie es Einsen gibt.
+
+[learned.en]
+With a **mask** (`and`) you pick out single bits, and shifting brings every bit to position 0 once. In C:
+
+```c
+unsigned int x = read_int();
+int ones = 0;
+while (x != 0) { ones += x & 1; x >>= 1; }
+```
+
+`unsigned` matters here: only then is `>>` guaranteed to shift in zeros.
+
+Real processors have an instruction of their own for this: x86 `popcnt`, RISC-V `cpop` (from the Zbb extension); ARM counts with the vector instruction `cnt`. In C, `__builtin_popcount(x)` (GCC, Clang) and, since C23, `stdc_count_ones(x)` give you the result.
+
+**Pro view:** `x & (x - 1)` clears the lowest one. If you repeat that until x is zero, you need only as many passes as there are ones.
+
+[start]
+; Einsen zählen
+; Lies eine Zahl und gib aus, wie viele ihrer 32 Bits 1 sind.
+
+        halt
+
+[reference]
+        sys  READ_INT          ; r0 = Zahl
+        mov  r1, 0             ; r1 = Anzahl Einsen ; mutate:skip (Register starten ohnehin mit 0)
+schleife:
+        and  r2, r0, 1         ; r2 = unterstes Bit
+        add  r1, r2            ; mitzählen
+        shr  r0, 1             ; logisch schieben, links kommt 0 nach
+        jnz  schleife          ; noch Einsen übrig?
+        mov  r0, r1
+        sys  WRITE_INT
+        halt
+
+[test]
+name = grundfall
+in = 13
+out = 3
+
+[test]
+name = null
+in = 0
+out = 0
+
+[test]
+name = minus-eins
+in = -1
+out = 32
+
+[test]
+name = ein-byte
+in = 255
+out = 8
+
+[test]
+name = verdeckt-1
+hidden = yes
+in = 1
+out = 1
+
+[test]
+name = verdeckt-2
+hidden = yes
+in = 2
+out = 1
+
+[test]
+name = verdeckt-3
+hidden = yes
+in = -2147483648
+out = 1
+
+[test]
+name = verdeckt-4
+hidden = yes
+in = 2147483647
+out = 31
+
+[test]
+name = verdeckt-5
+hidden = yes
+in = 1431655765
+out = 16
+
+[test]
+name = verdeckt-6
+hidden = yes
+in = -2
+out = 31
+
+[test]
+name = verdeckt-7
+hidden = yes
+in = 1023
+out = 10
+
+[test]
+name = verdeckt-8
+hidden = yes
+in = 65536
+out = 1
+
+[test]
+name = verdeckt-9
+hidden = yes
+in = -1431655766
+out = 16
+
+[test]
+name = verdeckt-10
+hidden = yes
+in = 12345
+out = 6
+
+[test]
+name = verdeckt-11
+hidden = yes
+in = -256
+out = 24
+
+[test]
+name = verdeckt-12
+hidden = yes
+in = 1000000
+out = 7
+
+[test]
+name = verdeckt-13
+hidden = yes
+in = -1000000
+out = 20
+
+[test]
+name = verdeckt-14
+hidden = yes
+in = 305419896
+out = 13

@@ -9,7 +9,7 @@ is described in [ISA.md](ISA.md); all error keys are in [ERRORS.md](ERRORS.md).
 
 1. Copy the [sample level](#sample-level) to `levels/<id>.lvl` and add it to `levels/manifest.txt`.
 2. Write both languages completely: title, card, task, three hints, "what you just learned".
-3. Write the reference solution and at least five visible tests plus 8–20 hidden tests.
+3. Write the reference solution and 3–4 visible tests that cover the edge cases, plus 8–20 hidden tests (levels without input may have fewer).
 4. Run `stapelwerk check-levels --strict --mutate levels/` (or `npm run check`) until it passes.
 5. No third-party crates or npm packages.
 
