@@ -3,7 +3,7 @@
 //   const vm = await loadVm(urlOrBytes);     // URL/string (fetch) or bytes (ArrayBuffer, view, Module)
 //   vm.segments()                            // [{name, start, end, r, w, x}]
 //   const lv = vm.loadLevel(text);           // Level | null (diagnostics in vm.levelDiagnostics)
-//   lv.info(), lv.section(name), lv.free()
+//   lv.info(), lv.section(name), lv.image(name) → Uint8Array(4096) | null, lv.free()
 //   const s = vm.newSession(lv | null);      // null = sandbox
 //   s.assemble(src) → {ok, size, diagnostics:[{key,file,line,col,len,args}]}
 //   s.reset(test = -1) s.step(n = 1) s.run(maxCycles = 50000) s.back(n = 1) s.goto(step)
@@ -33,7 +33,6 @@ const MEM_BYTES = 65536;
 const SHADOW_BYTES = 4096;
 const OUTPUT_LIMIT = 8192;
 const SCREEN_BYTES = 4096;
-const REF_IMAGE_PREFIX = 'image.__ref_';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -270,6 +269,12 @@ class Level {
     return n < 0 ? null : vm.outText(n);
   }
 
+  /** Image `name` (`[image.NAME]`) as Uint8Array(4096) of colour indices, or null. */
+  image(name) {
+    const rows = this.section(`image.${name}`);
+    return rows === null ? null : decodeImage(rows);
+  }
+
   free() {
     if (this.h) this.vm.call('level_free', this.h);
     this.h = 0;
@@ -490,18 +495,20 @@ class Session {
   }
 
   /**
-   * Soll screen of test `test` (Uint8Array(4096) copy) or null: the reference solution's screen
-   * (unpacked levels), else the `[image.__ref_NAME]` written by pack-levels for
-   * `expect_screen = reference`.
+   * Soll screen of test `test` (Uint8Array(4096)) or null. For a visible test it follows its
+   * `expect_screen` from `info()`: an image name (in packed levels also `__ref_NAME`) gives that
+   * image, `reference` the reference solution's screen (unpacked levels only), none gives null.
+   * Hidden tests: the reference screen if the level has a reference.
    */
   referenceScreen(test) {
     if (!this.level) return null;
-    const ptr = this.vm.call('sess_reference_screen', this.handle(), test | 0) >>> 0;
-    if (ptr === STATUS_ERROR) return null;
-    if (ptr !== 0) return this.vm.u8.slice(ptr, ptr + SCREEN_BYTES);
-    const name = this.level.info().tests.find((t) => t.index === (test | 0))?.name;
-    const rows = name === undefined ? null : this.level.section(`${REF_IMAGE_PREFIX}${name}`);
-    return rows === null ? null : decodeImage(rows);
+    const index = test | 0;
+    const t = this.level.info().tests.find((x) => x.index === index);
+    if (t && t.expect_screen === null) return null;
+    if (t && t.expect_screen !== 'reference') return this.level.image(t.expect_screen);
+    const ptr = this.vm.call('sess_reference_screen', this.handle(), index) >>> 0;
+    if (ptr === STATUS_ERROR || ptr === 0) return null;
+    return this.vm.u8.slice(ptr, ptr + SCREEN_BYTES);
   }
 
   digest() {

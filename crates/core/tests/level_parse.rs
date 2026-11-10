@@ -61,9 +61,54 @@ fn info_json_shape() {
     assert!(j.starts_with(
         r#"{"id":"2-2-bis-zur-null","version":1,"chapter":2,"order":2,"kind":"normal","title":{"de":"Bis zur Null","en":"Until Zero"},"card":{"de":"#
     ));
-    assert!(j.contains(
-        r#""budget":100000,"seed":2202,"mobile":false,"heap_check":"strict","allow":null,"forbid":null,"tests":[{"index":0,"name":"grundfall"},{"index":1,"name":"leere-folge"},{"index":2,"name":"negativ"},{"index":3,"name":"zwischensumme-null"}],"hidden_tests":11,"ref_cycles":null,"ref_size":null,"sections":["text.de","text.en","hint.de","hint.en","learned.de","learned.en","start"]}"#
-    ), "{j}");
+    let details = |input: &str, out: &str| {
+        format!(
+            r#""in":[{input}],"in_text":"","out":[{out}],"out_text":null,"regs":[],"set":[],"call":null,"expect_reg":[],"expect":[],"screen_init":null,"expect_screen":null,"heap_empty":false"#
+        )
+    };
+    let tests = format!(
+        r#""tests":[{{"index":0,"name":"grundfall",{}}},{{"index":1,"name":"leere-folge",{}}},{{"index":2,"name":"negativ",{}}},{{"index":3,"name":"zwischensumme-null",{}}}]"#,
+        details("3,4,5,0", "12"),
+        details("0", "0"),
+        details("-7,10,0", "3"),
+        details("100,-100,42,0", "42"),
+    );
+    assert!(
+        j.contains(&format!(
+            r#""budget":100000,"seed":2202,"mobile":false,"heap_check":"strict","allow":null,"forbid":null,{tests},"hidden_tests":11,"ref_cycles":null,"ref_size":null,"sections":["text.de","text.en","hint.de","hint.en","learned.de","learned.en","start"]}}"#
+        )),
+        "{j}"
+    );
+    assert!(!j.contains("verdeckt"), "hidden tests stay hidden");
+}
+
+#[test]
+fn info_json_test_details() {
+    let src = level(
+        "",
+        "[test]\nname = a\nin = -1 0x10\nin_text = \"x;y\\n\"\n\
+         reg r1 = -2\nset 0x4000 = 1 -1\nsetb DATA = \"ab\"\n\
+         screen_init = bild\nout =\nout_text = \"ok\"\nexpect 0x4000 = 7\nexpectb ZIEL = 9 255\n\
+         expect_reg sp = 0xF000\nexpect_screen = bild\nexpect_heap_empty = yes\n\n\
+         [test]\nname = f\ncall = fn\nreg r3 = 4\nexpect_screen = reference\n\n\
+         [test]\nname = h\nhidden = yes\nin = 99\n\n\
+         [image.bild]\nF.\n",
+    );
+    let l = parse(&src).unwrap_or_else(|d| panic!("{d:?}"));
+    let j = l.info_json();
+    assert!(
+        j.contains(
+            r#"{"index":0,"name":"a","in":[-1,16],"in_text":"x;y\n","out":[],"out_text":"ok","regs":[{"reg":"r1","value":-2}],"set":[{"addr":16384,"words":[1,-1]},{"addr":"DATA","bytes":[97,98]}],"call":null,"expect_reg":[{"reg":"sp","value":61440}],"expect":[{"addr":16384,"words":[7]},{"addr":"ZIEL","bytes":[9,255]}],"screen_init":"bild","expect_screen":"bild","heap_empty":true}"#
+        ),
+        "{j}"
+    );
+    assert!(
+        j.contains(
+            r#"{"index":1,"name":"f","in":[],"in_text":"","out":null,"out_text":null,"regs":[{"reg":"r3","value":4}],"set":[],"call":"fn","expect_reg":[],"expect":[],"screen_init":null,"expect_screen":"reference","heap_empty":false}],"hidden_tests":1"#
+        ),
+        "{j}"
+    );
+    assert!(!j.contains("99"));
 }
 
 #[test]

@@ -170,7 +170,9 @@ argument names of [ERRORS.md](ERRORS.md).
  "title":{"de":"Bis zur Null","en":"Until Zero"},"card":{"de":"…","en":"…"},
  "budget":100000,"seed":2202,"mobile":false,"heap_check":"strict",
  "allow":null,"forbid":null,
- "tests":[{"index":0,"name":"grundfall"}, …],   // visible tests only
+ "tests":[{"index":0,"name":"grundfall","in":[3,4,5,0],"in_text":"","out":[12],"out_text":null,
+           "regs":[],"set":[],"call":null,"expect_reg":[],"expect":[],
+           "screen_init":null,"expect_screen":null,"heap_empty":false}, …],   // visible tests only
  "hidden_tests":1,"ref_cycles":null,"ref_size":null,
  "sections":["text.de","text.en","hint.de","hint.en","learned.de","learned.en","start"]}
 
@@ -214,6 +216,25 @@ can reproduce the failure.
 removed, `ref_cycles`/`ref_size` are written into `[level]`, and `expect_screen = reference` is
 turned into an `[image.__ref_TESTNAME]` section with the test switched to that image. Therefore
 `sess_reference_screen` returns 0 in the browser.
+
+**Test details in `level_info`** (*extension of v1*, additive, `abi_version()` stays 1). Every
+entry of `tests` (visible tests only; hidden tests are only counted in `hidden_tests`) carries what
+goes in and what is expected, so the UI can show it before anything runs:
+
+| Field | Value |
+|---|---|
+| `in` | numbers of `in` (`[]` if none) |
+| `in_text` | `in_text` as a string (`""` if none) |
+| `out` / `out_text` | expected number output / text output; `null` = not checked |
+| `regs` / `expect_reg` | `[{"reg":"r1","value":-2}]` (`reg rX = v` / `expect_reg rX = v`; values signed) |
+| `set` / `expect` | `[{"addr":16384,"words":[1,-1]}]` for `set`/`expect`, `[{"addr":"DATA","bytes":[97,98]}]` for `setb`/`expectb`; `addr` is a number, or the symbol name when the line names a symbol (the level alone cannot resolve symbols); words signed, bytes 0…255 |
+| `call` | label of a function test or `null` |
+| `screen_init` | image name or `null` |
+| `expect_screen` | `"reference"`, an image name or `null`; packed levels name the image `__ref_TESTNAME` |
+| `heap_empty` | `expect_heap_empty` |
+
+Images are read with `level_section("image.NAME")` (rows of `.`/hex digits; `vm.js`:
+`level.image(name)` → `Uint8Array(4096)`).
 
 ## Session semantics
 
@@ -271,10 +292,13 @@ snapshots, breakpoints and line counters.
 - The VM object: `mock` (`false`), `abiVersion`, `segments()`, `loadLevel(text)` → `Level` or
   `null` (then `levelDiagnostics` holds the `lvl.*` diagnostics), `newSession(level | null)`
   (`null` = sandbox), `onInternalError` (optional callback). Class `Level`: `info()` (the
-  `level_info` object), `section(name)` (text or `null`), `free()`.
+  `level_info` object), `section(name)` (text or `null`), `image(name)` (`Uint8Array(4096)` of
+  colour indices or `null`), `free()`.
 - Additional `Session` methods: `horizon()` (furthest step reached on the current timeline, kept in
-  JavaScript) and `referenceScreen(test)` (a 4096-byte copy: `sess_reference_screen`, or for packed
-  levels the `[image.__ref_NAME]` section of the visible test `test`; `null` otherwise).
+  JavaScript) and `referenceScreen(test)` (`Uint8Array(4096)` or `null`): for a visible test the
+  image named by its `expect_screen` (in packed levels `__ref_NAME`), for `reference` the screen
+  from `sess_reference_screen` (unpacked levels), `null` without a screen expectation; for hidden
+  tests `sess_reference_screen` if available.
 - Status results are unsigned numbers (`0xFFFFFFFF` for handle/argument errors). `memory()` and
   `shadow()` return live views; fetch them again after every call. `output()` returns
   `[{kind, value}]` for the visible entries. `state()` decodes the `StateView` with the field

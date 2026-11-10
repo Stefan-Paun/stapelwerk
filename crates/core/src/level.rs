@@ -305,6 +305,7 @@ impl Level {
             w.begin_object();
             w.field_uint("index", i as u64);
             w.field_str("name", &t.name);
+            t.write_details_json(w);
             w.end_object();
         }
         w.end_array();
@@ -333,6 +334,105 @@ impl Level {
         w.end_array();
         w.end_object();
     }
+}
+
+impl TestCase {
+    /// Writes the detail fields of a visible test in `level_info` (ABI v1 extension): `in`,
+    /// `in_text`, `out`, `out_text`, `regs`, `set`, `call`, `expect_reg`, `expect`, `screen_init`,
+    /// `expect_screen`, `heap_empty`. Register and word values are signed (`i32`), bytes 0…255;
+    /// addresses are numbers, or the symbol name when the line names a symbol.
+    pub fn write_details_json(&self, w: &mut JsonWriter) {
+        w.key("in");
+        w.begin_array();
+        for v in &self.input {
+            w.int(*v as i64);
+        }
+        w.end_array();
+        w.field_str("in_text", &String::from_utf8_lossy(&self.in_text));
+        w.key("out");
+        match &self.out {
+            Some(out) => {
+                w.begin_array();
+                for v in out {
+                    w.int(*v as i64);
+                }
+                w.end_array();
+            }
+            None => w.null(),
+        }
+        w.key("out_text");
+        match &self.out_text {
+            Some(b) => w.str(&String::from_utf8_lossy(b)),
+            None => w.null(),
+        }
+        write_regs(w, "regs", &self.regs);
+        write_mem_specs(w, "set", &self.sets);
+        w.key("call");
+        match &self.call {
+            Some(c) => w.str(c),
+            None => w.null(),
+        }
+        write_regs(w, "expect_reg", &self.expect_regs);
+        write_mem_specs(w, "expect", &self.expects);
+        w.key("screen_init");
+        match &self.screen_init {
+            Some(name) => w.str(name),
+            None => w.null(),
+        }
+        w.key("expect_screen");
+        match &self.expect_screen {
+            Some(ScreenExpect::Reference) => w.str("reference"),
+            Some(ScreenExpect::Image(name)) => w.str(name),
+            None => w.null(),
+        }
+        w.field_bool("heap_empty", self.expect_heap_empty);
+    }
+}
+
+/// `[{"reg":"r1","value":-2}]`
+fn write_regs(w: &mut JsonWriter, key: &str, regs: &[(Reg, u32)]) {
+    w.key(key);
+    w.begin_array();
+    for (r, v) in regs {
+        w.begin_object();
+        w.field_str("reg", r.name());
+        w.field_int("value", *v as i32 as i64);
+        w.end_object();
+    }
+    w.end_array();
+}
+
+/// `[{"addr":16384,"words":[1,-1]}, {"addr":"DATA","bytes":[97,98]}]`
+fn write_mem_specs(w: &mut JsonWriter, key: &str, specs: &[MemSpec]) {
+    w.key(key);
+    w.begin_array();
+    for spec in specs {
+        w.begin_object();
+        match &spec.addr {
+            AddrRef::Num(a) => w.field_uint("addr", *a as u64),
+            AddrRef::Symbol(s) => w.field_str("addr", s),
+        }
+        match &spec.values {
+            MemValues::Words(words) => {
+                w.key("words");
+                w.begin_array();
+                for v in words {
+                    w.int(*v as i32 as i64);
+                }
+                w.end_array();
+            }
+            MemValues::Bytes(bytes) => {
+                w.key("bytes");
+                w.begin_array();
+                for b in bytes {
+                    w.uint(*b as u64);
+                }
+                w.end_array();
+            }
+        }
+        w.end_object();
+    }
+    w.end_array();
 }
 
 fn write_lang_pair(w: &mut JsonWriter, key: &str, de: &str, en: &str) {

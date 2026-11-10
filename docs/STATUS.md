@@ -165,6 +165,22 @@ split of `asm/` (lexer, expr, parser, layout) is only a suggestion.
   warm-up), then median 0.15 ms (packed level, browser case; p90 0.24 ms) and 0.11 ms (unpacked,
   reference run cached after its first use); 200 repetitions each.
 
+### Phase 3A follow-up (test details, stronger fuzz-gen)
+
+- `level_info` lists for every visible test `in`, `in_text`, `out`, `out_text`, `regs`, `set`,
+  `call`, `expect_reg`, `expect`, `screen_init`, `expect_screen`, `heap_empty`
+  (`TestCase::write_details_json`; additive extension of ABI v1, ABI.md "Test details in
+  `level_info`"). `vm.js`: `level.image(name)`; `referenceScreen(test)` follows the test's
+  `expect_screen`.
+- `fuzz-gen` (`crates/cli/src/fuzz.rs`) builds structured programs: outer loop with counter,
+  inner loops, subroutines with prologue/epilogue and locals, direct and register calls and jumps,
+  forward branches, balanced push/pop, memory accesses only at valid aligned addresses (data,
+  bottom of the stack, screen, frame locals, fresh heap blocks), `ALLOC`/`FREE`, output system
+  calls, divisors made odd before division; one program in eight faults on purpose (12 snippets).
+  N = 300, seed 1: 262 HALTED, 34 FAULT (all planted), 4 BUDGET_EXCEEDED; steps median 6642,
+  p10 1289, p90 22555, max 54652; differential 2.86 million steps, 3306 digests in 0.84 s.
+  A unit test keeps the median ≥ 5000 steps and only planted faults.
+
 ## Clarifications made in phase 0
 
 These fill gaps in the original design; they are documented in ISA.md and ABI.md.
@@ -204,7 +220,7 @@ These fill gaps in the original design; they are documented in ISA.md and ABI.md
 | 7 | no panic on random bytes / corrupted sources (assembler, level parser, machine) | assembler and machine done; levels open |
 | 8 | time-travel invariant `digest(goto(k)) == d_k` in random order, thinning ≥ 3×, with input while WAITING_INPUT and `set_reg` | done (2A) |
 | 9 | every `fault.*` key has a triggering test (reads ERRORS.md via `include_str!`) | 1A (key list ↔ ERRORS.md already checked) |
-| 10 | differential test native vs. WASM via `fuzz-gen` | done (3A): `tools/differential.mjs`, N = 50 locally, 300 in CI |
+| 10 | differential test native vs. WASM via `fuzz-gen` | done (3A): `tools/differential.mjs`, N = 50 locally, 300 in CI; long-running structured programs |
 | 11 | `check-levels --strict --mutate levels/` | levels phase |
 | 12 | Node: export list == `abi-exports.txt`, no imports, ≤ 300 KiB, JSON shapes, `bad_handle`, views after `memory.grow`, time slices | done (3A): `test/wasm/abi.test.mjs`, `test/wasm/vm.test.mjs` |
 

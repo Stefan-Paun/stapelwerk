@@ -377,11 +377,58 @@ test('trap: new instance, sources reloaded, error "internal"', () => {
   }));
 });
 
-test('referenceScreen of an unpacked level', () => {
-  withLevel(levelText(), (lv) => withSession(lv, (s) => {
-    const scr = s.referenceScreen(0);
-    assert.ok(scr instanceof Uint8Array);
-    assert.equal(scr.length, 4096);
+const SCREEN_LEVEL = [
+  '[level]', 'id = bild', 'title.de = Bild', 'title.en = Picture', 'card.de = x', 'card.en = x', '',
+  '[reference]', '        li r0, 0xF000', '        mov r1, 5', '        stb r1, [r0 + 1]', '        halt', '',
+  '[test]', 'name = ref', 'expect_screen = reference', '',
+  '[test]', 'name = named', 'screen_init = start', 'expect_screen = ziel', '',
+  '[test]', 'name = packed', 'expect_screen = __ref_ref', '',
+  '[test]', 'name = none', 'in = 1 2', 'out = 3', '',
+  '[test]', 'name = versteckt', 'hidden = yes', 'expect_screen = reference', '',
+  '[image.start]', 'F', '',
+  '[image.ziel]', '.', '.A1', '',
+  '[image.__ref_ref]', '.5', '',
+].join('\n');
+
+test('level_info test details (ABI v1 extension)', () => {
+  withLevel(levelText(), (lv) => {
+    const [t0] = lv.info().tests;
+    assert.deepEqual(t0, {
+      index: 0, name: 'grundfall', in: [3, 4, 5, 0], in_text: '', out: [12], out_text: null, regs: [], set: [],
+      call: null, expect_reg: [], expect: [], screen_init: null, expect_screen: null, heap_empty: false,
+    });
+  });
+  withLevel(SCREEN_LEVEL, (lv) => {
+    const tests = lv.info().tests;
+    assert.deepEqual(tests.map((t) => [t.name, t.screen_init, t.expect_screen]), [
+      ['ref', null, 'reference'], ['named', 'start', 'ziel'], ['packed', null, '__ref_ref'], ['none', null, null],
+    ]);
+    assert.equal(lv.info().hidden_tests, 1);
+  });
+});
+
+test('Level.image and referenceScreen', () => {
+  withLevel(SCREEN_LEVEL, (lv) => withSession(lv, (s) => {
+    const ziel = lv.image('ziel');
+    assert.equal(ziel.length, 4096);
+    assert.deepEqual([ziel[0], ziel[64], ziel[65], ziel[66], ziel[67]], [0, 0, 10, 1, 0]);
+    assert.equal(lv.image('start')[0], 15);
+    assert.equal(lv.image('fehlt'), null);
+    const ref = s.referenceScreen(0);
+    assert.equal(ref.length, 4096);
+    assert.equal(ref[1], 5, 'reference solution drew pixel 1');
+    assert.deepEqual(s.referenceScreen(1), ziel);
+    assert.equal(s.referenceScreen(2)[1], 5, 'packed reference image');
+    assert.equal(s.referenceScreen(3), null, 'no screen expectation');
+    assert.equal(s.referenceScreen(4)[1], 5, 'hidden test: reference run');
     assert.equal(s.referenceScreen(99), null);
+    // The reference passes its own screen test; a black screen does not.
+    s.assemble('        li r0, 0xF000\n        mov r1, 5\n        stb r1, [r0 + 1]\n        halt\n');
+    const report = s.runTests();
+    assert.equal(report.tests[0].passed, true);
+    assert.equal(report.tests[1].mismatch.key, 'check.screen_mismatch');
+  }));
+  withLevel(levelText(), (lv) => withSession(lv, (s) => {
+    assert.equal(s.referenceScreen(0), null, 'level 2.2 has no screen tests');
   }));
 });
